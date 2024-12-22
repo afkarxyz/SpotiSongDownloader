@@ -1,3 +1,5 @@
+[![GitHub All Releases](https://img.shields.io/github/downloads/afkarxyz/SpotiSongDownloader-GUI/total?style=for-the-badge)](https://github.com/afkarxyz/SpotiSongDownloader-GUI/releases)
+
 # About
 
 **SpotiSongDownloader** is a GUI tool designed to download tracks from **spotisongdownloader.to**
