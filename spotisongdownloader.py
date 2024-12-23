@@ -7,7 +7,7 @@ import zendriver as zd
 from urllib.parse import unquote
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QComboBox, QLineEdit, 
-                            QPushButton, QProgressBar, QFileDialog)
+                            QPushButton, QProgressBar, QFileDialog, QCheckBox)
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QIcon
 
@@ -17,11 +17,12 @@ class DownloaderWorker(QThread):
     error = pyqtSignal(str)
     url_not_found = pyqtSignal()
 
-    def __init__(self, url, delay, output_dir):
+    def __init__(self, url, delay, output_dir, headless):
         super().__init__()
         self.url = url
         self.delay = delay
         self.output_dir = output_dir
+        self.headless = headless
 
     def extract_song_title(self, download_url):
         try:
@@ -67,7 +68,7 @@ class DownloaderWorker(QThread):
 
     async def download_track(self):
         try:
-            browser = await zd.start()
+            browser = await zd.start(headless=self.headless) 
             page = await browser.get("https://spotisongdownloader.to")
             
             await asyncio.sleep(self.delay)
@@ -186,6 +187,11 @@ class SpotiSongDownloaderGUI(QMainWindow):
         speed_layout.addWidget(speed_label)
         speed_layout.addWidget(self.speed_combo)
         
+        # Add headless checkbox
+        self.headless_checkbox = QCheckBox("Headless")
+        self.headless_checkbox.setChecked(True)
+        speed_layout.addWidget(self.headless_checkbox)
+        
         bottom_layout.addLayout(speed_layout)
         bottom_layout.addStretch()
         
@@ -248,7 +254,12 @@ class SpotiSongDownloaderGUI(QMainWindow):
         self.progress_bar.setValue(0)
         self.status_label.setText("Downloading...")
 
-        self.worker = DownloaderWorker(url, self.get_delay_seconds(), output_dir)
+        self.worker = DownloaderWorker(
+            url, 
+            self.get_delay_seconds(), 
+            output_dir,
+            self.headless_checkbox.isChecked()
+        )
         self.worker.progress.connect(self.update_progress)
         self.worker.finished.connect(self.download_finished)
         self.worker.error.connect(self.download_error)
