@@ -187,7 +187,6 @@ class SpotiSongDownloaderGUI(QMainWindow):
         speed_layout.addWidget(speed_label)
         speed_layout.addWidget(self.speed_combo)
         
-        # Add headless checkbox
         self.headless_checkbox = QCheckBox("Headless")
         self.headless_checkbox.setChecked(True)
         speed_layout.addWidget(self.headless_checkbox)
