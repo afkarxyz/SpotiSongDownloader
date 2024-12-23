@@ -8,6 +8,8 @@ However, since the site imposes a limit of 3 tracks per day, I developed this li
 
 ![image](https://github.com/user-attachments/assets/ca4c2392-312a-4fc4-819d-f407766a18b6)
 
+> When **Headless** is enabled, the browser runs in the background without a graphical interface, improving performance and allowing seamless automation.
+
 > [!NOTE]  
 > Requires **Google Chrome.**
 
