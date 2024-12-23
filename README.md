@@ -6,7 +6,7 @@ One of the main advantages of **spotisongdownloader.to** is that it allows you t
 
 However, since the site imposes a limit of 3 tracks per day, I developed this lightweight software to bypass the daily download restriction.
 
-![image](https://github.com/user-attachments/assets/e21d459f-2386-46e3-9741-10e0bbfc1db0)
+![image](https://github.com/user-attachments/assets/ca4c2392-312a-4fc4-819d-f407766a18b6)
 
 > [!NOTE]  
 > Requires **Google Chrome.**
