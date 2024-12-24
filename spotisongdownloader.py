@@ -1,3 +1,4 @@
+# v1.2
 import sys
 import asyncio
 import aiohttp
@@ -592,4 +593,4 @@ def main():
     sys.exit(app.exec())
 
 if __name__ == "__main__":
-    main()
+    main()  
