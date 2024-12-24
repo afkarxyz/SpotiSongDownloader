@@ -19,4 +19,4 @@ To address the site's limitation of 3 downloads per day, I created this lightwei
 > [!NOTE]  
 > Requires **Google Chrome**
 
-#### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.2/SpotiSongDownloader.exe) SpotiSongDownloader
+#### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.3/SpotiSongDownloader.exe) SpotiSongDownloader
