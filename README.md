@@ -17,6 +17,6 @@ To address the site's limitation of 3 downloads per day, I created this lightwei
 > When **Headless** is enabled, the browser runs in the background without a graphical interface, improving performance and allowing seamless automation.
 
 > [!NOTE]  
-> Requires **Google Chrome.**
+> Requires **Google Chrome**
 
 #### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.2/SpotiSongDownloader.exe) SpotiSongDownloader
