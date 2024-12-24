@@ -7,7 +7,7 @@ import zendriver as zd
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QComboBox, QLineEdit, 
                             QPushButton, QProgressBar, QFileDialog, QCheckBox,
-                            QRadioButton, QGroupBox)
+                            QRadioButton, QGroupBox, QToolButton)
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QPixmap, QCursor
@@ -188,6 +188,8 @@ class SpotiSongDownloaderGUI(QMainWindow):
         
         self.track_info = None
         self.init_ui()
+        
+        self.url_input.textChanged.connect(self.validate_url)
 
     def format_duration(self, duration_ms):
         total_seconds = int(duration_ms / 1000)
@@ -208,11 +210,20 @@ class SpotiSongDownloaderGUI(QMainWindow):
         url_layout = QHBoxLayout()
         url_label = QLabel("Track URL:")
         url_label.setFixedWidth(100)
+        
         self.url_input = QLineEdit()
+        self.url_input.setPlaceholderText("Please enter track URL")
+        self.url_input.setClearButtonEnabled(True)
+        clear_button = self.url_input.findChild(QToolButton)
+        if clear_button:
+            clear_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        
         self.fetch_button = QPushButton("Fetch")
         self.fetch_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.fetch_button.setFixedWidth(100)
+        self.fetch_button.setEnabled(False)
         self.fetch_button.clicked.connect(self.fetch_track_info)
+        
         url_layout.addWidget(url_label)
         url_layout.addWidget(self.url_input)
         url_layout.addWidget(self.fetch_button)
@@ -234,7 +245,7 @@ class SpotiSongDownloaderGUI(QMainWindow):
         settings_group = QGroupBox("Settings")
         settings_layout = QHBoxLayout(settings_group)
         settings_layout.setContentsMargins(10, 5, 10, 5)
-        settings_layout.setSpacing(10)
+        settings_layout.setSpacing(20)
         
         speed_widget = QWidget()
         speed_widget.setFixedWidth(130)
@@ -261,7 +272,7 @@ class SpotiSongDownloaderGUI(QMainWindow):
         format_widget = QWidget()
         format_layout = QHBoxLayout(format_widget)
         format_layout.setContentsMargins(0, 0, 0, 0)
-        format_layout.setSpacing(8)
+        format_layout.setSpacing(15)
         
         format_label = QLabel("Filename Format:")
         self.format_title_artist = QRadioButton("Title - Artist")
@@ -359,10 +370,42 @@ class SpotiSongDownloaderGUI(QMainWindow):
         self.status_label = QLabel("")
         self.main_layout.addWidget(self.status_label)
 
+    def validate_url(self, url):
+        url = url.strip()
+        
+        self.fetch_button.setEnabled(False)
+        
+        if not url:
+            self.status_label.clear()
+            return
+            
+        if "open.spotify.com/" not in url:
+            self.status_label.setText("Please enter a valid Spotify URL")
+            return
+            
+        if "/album/" in url:
+            self.status_label.setText("Album URLs are not supported. Please enter a track URL.")
+            return
+            
+        if "/playlist/" in url:
+            self.status_label.setText("Playlist URLs are not supported. Please enter a track URL.")
+            return
+            
+        if "/track/" not in url:
+            self.status_label.setText("Please enter a valid Spotify track URL")
+            return
+            
+        self.fetch_button.setEnabled(True)
+        self.status_label.clear()
+
     def fetch_track_info(self):
         url = self.url_input.text().strip()
         if not url:
             self.status_label.setText("Please enter a Track URL")
+            return
+            
+        if "/album/" in url or "/playlist/" in url:
+            self.status_label.setText("Only track URLs are supported. Album and playlist URLs are not supported.")
             return
 
         self.fetch_button.setEnabled(False)
