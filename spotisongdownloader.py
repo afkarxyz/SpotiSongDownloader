@@ -1,4 +1,3 @@
-# v1.2
 import sys
 import asyncio
 import aiohttp
@@ -8,7 +7,7 @@ import zendriver as zd
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QComboBox, QLineEdit, 
                             QPushButton, QProgressBar, QFileDialog, QCheckBox,
-                            QRadioButton, QGroupBox, QToolButton)
+                            QRadioButton, QGroupBox)
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QPixmap, QCursor
@@ -215,9 +214,6 @@ class SpotiSongDownloaderGUI(QMainWindow):
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("Please enter track URL")
         self.url_input.setClearButtonEnabled(True)
-        clear_button = self.url_input.findChild(QToolButton)
-        if clear_button:
-            clear_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         
         self.fetch_button = QPushButton("Fetch")
         self.fetch_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
