@@ -10,13 +10,13 @@ To address the site's limitation of 3 downloads per day, I created this lightwei
 
 ![image](https://github.com/user-attachments/assets/a6d98ea0-ab1d-4e5e-b3a0-87df24c30ac2)
 
-![image](https://github.com/user-attachments/assets/65c9dfed-aca0-4bdf-8a9a-8fcbfb62700b)
+![image](https://github.com/user-attachments/assets/4a180ca0-7123-48b3-a06a-a28b5508ca29)
 
-![image](https://github.com/user-attachments/assets/0031f917-f899-41b7-b0ab-58788ed12d9c)
+![image](https://github.com/user-attachments/assets/1a6bfee8-d79e-408c-a099-ef73ac1e8376)
 
 > When **Headless** is enabled, the browser runs in the background without a graphical interface, improving performance and allowing seamless automation.
 
 > [!NOTE]  
 > Requires **Google Chrome**
 
-#### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.3/SpotiSongDownloader.exe) SpotiSongDownloader
+#### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.4/SpotiSongDownloader.exe) SpotiSongDownloader
