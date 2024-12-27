@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QPushButton, QProgressBar, QFileDialog, QCheckBox,
                             QRadioButton, QGroupBox)
 from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QIcon, QPixmap, QCursor
 
 class ImageDownloader(QThread):
@@ -72,7 +72,7 @@ class DownloaderWorker(QThread):
 
     def format_filename(self):
         title = self.track_info['result']['name']
-        artists = self.track_info['result']['artists']
+        artists = self.track_info['result']['artists'].replace(" & ", ", ")
         
         if self.filename_format == "title_artist":
             formatted = f"{title} - {artists}"
@@ -84,6 +84,11 @@ class DownloaderWorker(QThread):
             formatted = formatted.replace(char, '_')
             
         return formatted
+
+    def check_file_exists(self):
+        filename = self.format_filename()
+        output_path = os.path.join(self.output_dir, f"{filename}.m4a")
+        return os.path.exists(output_path)
 
     async def download_file(self, download_url):
         filename = self.format_filename()
@@ -104,10 +109,14 @@ class DownloaderWorker(QThread):
                         progress = 50 + int((downloaded / file_size) * 50)
                         self.progress.emit(progress)
         
-        return output_path
+        return "Download complete!"
 
     async def download_track(self):
         try:
+            if self.check_file_exists():
+                self.finished.emit("File already exists, skipping download")
+                return
+
             browser = await zd.start(headless=self.headless) 
             page = await browser.get("https://spotisongdownloader.to")
             
@@ -159,8 +168,8 @@ class DownloaderWorker(QThread):
             await browser.stop()
 
             if download_url:
-                output_path = await self.download_file(download_url)
-                self.finished.emit("Download complete!")
+                message = await self.download_file(download_url)
+                self.finished.emit(message)
             else:
                 self.url_not_found.emit()
 
@@ -173,6 +182,7 @@ class DownloaderWorker(QThread):
 class SpotiSongDownloaderGUI(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.settings = QSettings('SpotiSongDownloader', 'Settings')
         self.setWindowTitle("SpotiSongDownloader")
         
         icon_path = os.path.join(os.path.dirname(__file__), "icon.svg")
@@ -190,12 +200,36 @@ class SpotiSongDownloaderGUI(QMainWindow):
         self.init_ui()
         
         self.url_input.textChanged.connect(self.validate_url)
+        self.load_settings()
+        self.setup_settings_persistence()
+        
+    def load_settings(self):
+        speed = self.settings.value('speed', 'Fast')
+        headless = self.settings.value('headless', True, type=bool)
+        format_type = self.settings.value('format', 'title_artist')
+        output_dir = self.settings.value('output_dir', self.default_music_dir)
+        
+        self.speed_combo.setCurrentText(speed)
+        self.headless_checkbox.setChecked(headless)
+        self.format_title_artist.setChecked(format_type == 'title_artist')
+        self.format_artist_title.setChecked(format_type == 'artist_title')
+        self.dir_input.setText(output_dir)
+        
+    def setup_settings_persistence(self):
+        self.speed_combo.currentTextChanged.connect(
+            lambda x: self.settings.setValue('speed', x))
+        self.headless_checkbox.stateChanged.connect(
+            lambda x: self.settings.setValue('headless', bool(x)))
+        self.format_title_artist.toggled.connect(
+            lambda x: self.settings.setValue('format', 'title_artist' if x else 'artist_title'))
+        self.dir_input.textChanged.connect(
+            lambda x: self.settings.setValue('output_dir', x))
 
     def format_duration(self, duration_ms):
         total_seconds = int(duration_ms / 1000)
         minutes = total_seconds // 60
         seconds = total_seconds % 60
-        return f"{minutes:02d}:{seconds:02d}"
+        return f"{minutes}:{seconds:02d}"
 
     def init_ui(self):
         central_widget = QWidget()
@@ -354,8 +388,8 @@ class SpotiSongDownloaderGUI(QMainWindow):
 
         download_layout = QHBoxLayout()
         download_layout.addStretch()
-        download_layout.addWidget(self.download_button)
         download_layout.addWidget(self.open_button)
+        download_layout.addWidget(self.download_button)
         download_layout.addWidget(self.cancel_button)
         download_layout.addStretch()
         self.main_layout.addLayout(download_layout)
@@ -418,7 +452,7 @@ class SpotiSongDownloaderGUI(QMainWindow):
         self.fetch_button.setEnabled(True)
         
         title = info['result']['name']
-        artist = info['result']['artists']
+        artist = info['result']['artists'].replace(" & ", ", ")
         duration = self.format_duration(info['result']['duration_ms'])
         
         self.title_label.setText(title)
@@ -567,9 +601,9 @@ class SpotiSongDownloaderGUI(QMainWindow):
     def download_finished(self, message):
         self.progress_bar.hide()
         self.status_label.setText(message)
-        self.download_button.setText("Clear")
-        self.download_button.show()
         self.open_button.show()
+        self.download_button.setText("Clear") 
+        self.download_button.show()
         self.cancel_button.hide()
         self.download_button.setEnabled(True)
 
