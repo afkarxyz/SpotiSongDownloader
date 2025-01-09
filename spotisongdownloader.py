@@ -275,7 +275,7 @@ class SpotiSongDownloaderGUI(QMainWindow):
 
         settings_group = QGroupBox("Settings")
         settings_layout = QHBoxLayout(settings_group)
-        settings_layout.setContentsMargins(10, 5, 10, 5)
+        settings_layout.setContentsMargins(10, 5, 10, 10)
         settings_layout.setSpacing(20)
         
         speed_widget = QWidget()
