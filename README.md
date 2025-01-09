@@ -8,9 +8,9 @@ To address the site's limitation of 3 downloads per day, I created this lightwei
 
 ## Screenshots
 
-![image](https://github.com/user-attachments/assets/a6d98ea0-ab1d-4e5e-b3a0-87df24c30ac2)
+![image](https://github.com/user-attachments/assets/97518f93-d07b-4cdd-b1df-ddb7b3bd2e05)
 
-![image](https://github.com/user-attachments/assets/4a180ca0-7123-48b3-a06a-a28b5508ca29)
+![image](https://github.com/user-attachments/assets/1cae8459-157c-4bac-8abe-5fb75d47d5ba)
 
 ![image](https://github.com/user-attachments/assets/1a6bfee8-d79e-408c-a099-ef73ac1e8376)
 
@@ -19,4 +19,4 @@ To address the site's limitation of 3 downloads per day, I created this lightwei
 > [!NOTE]  
 > Requires **Google Chrome**
 
-#### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.4/SpotiSongDownloader.exe) SpotiSongDownloader
+#### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.5/SpotiSongDownloader.exe) SpotiSongDownloader
