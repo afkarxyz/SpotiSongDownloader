@@ -1,5 +1,7 @@
 [![GitHub All Releases](https://img.shields.io/github/downloads/afkarxyz/SpotiSongDownloader/total?style=for-the-badge)](https://github.com/afkarxyz/SpotiSongDownloader/releases)
 
+![SpotiSongDownloader](https://github.com/user-attachments/assets/3c17df36-86d0-490b-b32d-d57ac691f48e)
+
 **SpotiSongDownloader** is a GUI tool designed to help download Spotify tracks from **spotisongdownloader.to** without limits.
 #
 **spotisongdownloader.to** gives users a distinct edge by allowing them to download original M4A files directly from the source. This ensures better audio quality compared to other platforms that often rely on lower-quality tracks sourced from YouTube.
