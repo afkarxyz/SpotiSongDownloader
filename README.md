@@ -2,7 +2,10 @@
 
 ![SpotiSongDownloader](https://github.com/user-attachments/assets/3c17df36-86d0-490b-b32d-d57ac691f48e)
 
-**SpotiSongDownloader** is a GUI tool designed to help download Spotify tracks from **spotisongdownloader.to** without limits.
+<div align="center">
+<b>SpotiSongDownloader</b> is a GUI tool designed to help download Spotify tracks from <b>spotisongdownloader.to</b> without limits.
+</div>
+
 #
 **spotisongdownloader.to** gives users a distinct edge by allowing them to download original M4A files directly from the source. This ensures better audio quality compared to other platforms that often rely on lower-quality tracks sourced from YouTube.
 
@@ -21,4 +24,4 @@ To overcome the site's limitation of 3 downloads per day, I created this lightwe
 > [!NOTE]  
 > Requires **Google Chrome**
 
-#### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.6/SpotiSongDownloader.exe) SpotiSongDownloader
+### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.6/SpotiSongDownloader.exe) SpotiSongDownloader
