@@ -117,7 +117,7 @@ class DownloaderWorker(QThread):
                 self.finished.emit("File already exists, skipping download")
                 return
 
-            browser = await zd.start(headless=self.headless) 
+            browser = await zd.start(headless=self.headless)
             page = await browser.get("https://spotisongdownloader.to")
             
             await asyncio.sleep(self.delay)
@@ -130,23 +130,28 @@ class DownloaderWorker(QThread):
             
             self.progress.emit(20)
 
-            generate_link_button = await page.wait_for("a#download_btn")
+            generate_link_button = await page.wait_for('a[dlink="await"][class*="button is-primary"]')
             if generate_link_button:
                 await generate_link_button.click()
 
             self.progress.emit(30)
 
-            await page.wait_for("#qquality")
+            await page.wait_for(".qformats select")
+            
             await page.evaluate("""
-                var select = document.getElementById('qquality');
-                select.value = 'm4a';
-                select.dispatchEvent(new Event('change', { bubbles: true }));
+                const qualitySelect = document.querySelector('.qformats select');
+                if (!qualitySelect) throw new Error('Quality selector not found');
+                const qformatsDiv = document.querySelector('.qformats');
+                qformatsDiv.dispatchEvent(new MouseEvent('mousedown', {cancelable: true, view: window}));
+                qualitySelect.value = 'm4a';
+                qualitySelect.dispatchEvent(new Event('change'));
+                if (typeof qselectOne === 'function') qselectOne();
             """)
 
             self.progress.emit(40)
 
             download_url = None
-            max_attempts = 30
+            max_attempts = 60
             attempt = 0
             
             while attempt < max_attempts and not download_url:
