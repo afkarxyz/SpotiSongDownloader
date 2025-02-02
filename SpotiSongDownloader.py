@@ -579,7 +579,7 @@ class SpotiSongDownloaderGUI(QMainWindow):
         self.fetch_button.setEnabled(True)
         
         title = info['result']['name']
-        artist = info['result']['artists'].replace(" & ", ", ")
+        artists = info['result']['artists'].replace(" & ", ", ")
         duration = self.format_duration(info['result']['duration_ms'])
         album = info['result']['album_name']
         release_date = info['result']['release_date']
@@ -591,8 +591,11 @@ class SpotiSongDownloaderGUI(QMainWindow):
         except:
             formatted_date = release_date
         
+        artist_count = len(artists.split(","))
+        artist_label_text = "Artists" if artist_count > 1 else "Artist"
+        
         self.title_label.setText(title)
-        self.artist_label.setText(f"<b>Artist:</b> {artist}")
+        self.artist_label.setText(f"<b>{artist_label_text}:</b> {artists}")
         self.album_label.setText(f"<b>Album:</b> {album}")
         self.release_label.setText(f"<b>Release Date:</b> {formatted_date}")
         self.duration_label.setText(f"<b>Duration:</b> {duration}")
