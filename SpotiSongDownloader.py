@@ -4,6 +4,10 @@ import aiohttp
 import os
 from pathlib import Path
 import zendriver as zd
+from urllib.parse import urlparse
+from random import shuffle
+from time import sleep
+import requests
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QComboBox, QLineEdit, 
                             QPushButton, QProgressBar, QFileDialog, QCheckBox,
@@ -38,19 +42,93 @@ class TrackInfoFetcher(QThread):
     def __init__(self, url):
         super().__init__()
         self.url = url
+
+    def get_proxy_list(self):
+        base_url = "https://raw.githubusercontent.com/afkarxyz/proxies/main/"
+        proxy_types = ["http", "https", "socks4", "socks5"]
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
         
-    async def fetch_info(self):
-        api_url = f"https://api.fabdl.com/spotify/get?url={self.url}"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api_url) as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    raise Exception("Failed to fetch track information")
+        all_proxies = []
+        for proxy_type in proxy_types:
+            try:
+                response = requests.get(f"{base_url}{proxy_type}", headers=headers)
+                if response.status_code == 200:
+                    proxies = response.text.splitlines()
+                    formatted_proxies = [(proxy, proxy_type) for proxy in proxies]
+                    all_proxies.extend(formatted_proxies)
+            except:
+                continue
+        
+        if all_proxies:
+            shuffle(all_proxies)
+            return all_proxies
+        return None
+
+    def get_json_with_proxy(self, url, headers, proxies):
+        for proxy, proxy_type in proxies:
+            try:
+                response = requests.get(
+                    url,
+                    headers=headers,
+                    proxies={proxy_type: proxy},
+                    timeout=10
+                )
+                
+                if response.status_code == 429:
+                    sleep(int(response.headers.get("Retry-After", 1)) + 1)
+                    continue
+                    
+                if response.status_code == 200:
+                    return response.json()
+            except:
+                continue
+        return None
+
+    def fetch_track_info(self):
+        proxies = self.get_proxy_list()
+        if not proxies:
+            raise Exception("Failed to get proxy list")
+            
+        parsed_url = urlparse(self.url)
+        track_id = parsed_url.path.split('/')[-1]
+        
+        token_url = 'https://open.spotify.com/get_access_token?reason=transport&productType=web_player'
+        track_url = f'https://api.spotify.com/v1/tracks/{track_id}'
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Origin': 'https://open.spotify.com',
+            'Referer': 'https://open.spotify.com/'
+        }
+        
+        token_data = self.get_json_with_proxy(token_url, headers, proxies)
+        if not token_data:
+            raise Exception("Failed to get access token")
+            
+        headers['Authorization'] = f'Bearer {token_data["accessToken"]}'
+        
+        track_data = self.get_json_with_proxy(track_url, headers, proxies)
+        if not track_data:
+            raise Exception("Failed to get track data")
+            
+        return {
+            "result": {
+                "artists": ", ".join([artist['name'] for artist in track_data['artists']]),
+                "name": track_data['name'],
+                "album_name": track_data['album']['name'],
+                "duration_ms": track_data['duration_ms'],
+                "image": track_data['album']['images'][0]['url'] if track_data['album']['images'] else '',
+                "release_date": track_data['album']['release_date']
+            }
+        }
                     
     def run(self):
         try:
-            result = asyncio.run(self.fetch_info())
+            result = self.fetch_track_info()
             self.finished.emit(result)
         except Exception as e:
             self.error.emit(str(e))
@@ -130,7 +208,7 @@ class DownloaderWorker(QThread):
             
             self.progress.emit(20)
 
-            generate_link_button = await page.wait_for('a[dlink="await"][class*="button is-primary"]')
+            generate_link_button = await page.wait_for('a[dlink][class*="button is-primary"]')
             if generate_link_button:
                 await generate_link_button.click()
 
@@ -156,19 +234,19 @@ class DownloaderWorker(QThread):
             
             while attempt < max_attempts and not download_url:
                 links = await page.evaluate("""
-                    Array.from(document.getElementsByTagName('a')).map(a => a.href)
+                    Array.from(document.getElementsByTagName('a'))
+                    .map(a => a.href)
+                    .filter(href => href && typeof href === 'string' && href.endsWith('.m4a'))
                 """)
                 
-                for link in links:
-                    if isinstance(link, str) and link.endswith('.m4a'):
-                        download_url = link
-                        break
+                if links and links[0]:
+                    download_url = links[0]
+                    break
                 
-                if not download_url:
-                    await asyncio.sleep(0.5)
-                    attempt += 1
-                    progress = 40 + int((attempt / max_attempts) * 10)
-                    self.progress.emit(progress)
+                await asyncio.sleep(0.5)
+                attempt += 1
+                progress = 40 + int((attempt / max_attempts) * 10)
+                self.progress.emit(progress)
 
             await browser.stop()
 
@@ -351,7 +429,7 @@ class SpotiSongDownloaderGUI(QMainWindow):
         track_details_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.title_label = QLabel()
-        self.title_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        self.title_label.setStyleSheet("font-size: 13px; font-weight: bold;")
         self.title_label.setWordWrap(True)
         self.title_label.setMinimumWidth(400)
         
@@ -359,14 +437,30 @@ class SpotiSongDownloaderGUI(QMainWindow):
         self.artist_label.setStyleSheet("font-size: 12px;")
         self.artist_label.setWordWrap(True)
         self.artist_label.setMinimumWidth(400)
+        self.artist_label.setTextFormat(Qt.TextFormat.RichText)
+
+        self.album_label = QLabel()
+        self.album_label.setStyleSheet("font-size: 12px;")
+        self.album_label.setWordWrap(True)
+        self.album_label.setMinimumWidth(400)
+        self.album_label.setTextFormat(Qt.TextFormat.RichText)
+
+        self.release_label = QLabel()
+        self.release_label.setStyleSheet("font-size: 12px;")
+        self.release_label.setWordWrap(True)
+        self.release_label.setMinimumWidth(400)
+        self.release_label.setTextFormat(Qt.TextFormat.RichText)
 
         self.duration_label = QLabel()
-        self.duration_label.setStyleSheet("font-size: 12px; font-weight: bold;")
+        self.duration_label.setStyleSheet("font-size: 12px;")
         self.duration_label.setWordWrap(True)
         self.duration_label.setMinimumWidth(400)
+        self.duration_label.setTextFormat(Qt.TextFormat.RichText)
 
         track_details_layout.addWidget(self.title_label)
         track_details_layout.addWidget(self.artist_label)
+        track_details_layout.addWidget(self.album_label)
+        track_details_layout.addWidget(self.release_label)
         track_details_layout.addWidget(self.duration_label)
         track_layout.addWidget(track_details_container, stretch=1)
         track_layout.addStretch()
@@ -487,10 +581,21 @@ class SpotiSongDownloaderGUI(QMainWindow):
         title = info['result']['name']
         artist = info['result']['artists'].replace(" & ", ", ")
         duration = self.format_duration(info['result']['duration_ms'])
+        album = info['result']['album_name']
+        release_date = info['result']['release_date']
+        
+        try:
+            from datetime import datetime
+            date_obj = datetime.strptime(release_date, '%Y-%m-%d')
+            formatted_date = date_obj.strftime('%d-%m-%Y')
+        except:
+            formatted_date = release_date
         
         self.title_label.setText(title)
-        self.artist_label.setText(artist)
-        self.duration_label.setText(duration)
+        self.artist_label.setText(f"<b>Artist:</b> {artist}")
+        self.album_label.setText(f"<b>Album:</b> {album}")
+        self.release_label.setText(f"<b>Release Date:</b> {formatted_date}")
+        self.duration_label.setText(f"<b>Duration:</b> {duration}")
         
         image_url = info['result']['image']
         if '/ab67616d0000b273' in image_url:
@@ -510,7 +615,7 @@ class SpotiSongDownloaderGUI(QMainWindow):
         self.update_button.hide()
         self.status_label.clear()
         
-        self.adjustWindowHeight()
+        self.setFixedHeight(180)
 
     def adjustWindowHeight(self):
         title_height = self.title_label.sizeHint().height()
