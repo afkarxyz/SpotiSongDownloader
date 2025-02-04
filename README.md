@@ -11,17 +11,16 @@
 
 To overcome the site's limitation of 3 downloads per day, I created this lightweight tool to bypass the daily download restriction.
 
+### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.9/SpotiSongDownloader.exe)
+
 ## Screenshots
 
-![image](https://github.com/user-attachments/assets/b029e616-3aba-43e1-bbe9-88133c2a9300)
+![image](https://github.com/user-attachments/assets/426607c0-da2c-4b8c-9c88-c64159de77cc)
 
-![image](https://github.com/user-attachments/assets/e0f3ea75-7611-42ed-880f-6c3f773a50fc)
+![image](https://github.com/user-attachments/assets/4f5ca0ac-20a0-4091-9f71-04d217d32714)
 
-![image](https://github.com/user-attachments/assets/28356627-b3e1-4521-ab8c-a334a550f779)
+![image](https://github.com/user-attachments/assets/51413c09-b4e8-4384-887e-5c26eff437a6)
 
-> When **Headless** is enabled, the browser runs in the background without a graphical interface, improving performance and allowing seamless automation.
+![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
 
-> [!NOTE]  
-> Requires **Google Chrome**
-
-### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v1.8/SpotiSongDownloader.exe)
+![image](https://github.com/user-attachments/assets/527273e5-5afb-4c22-8ad2-59656bda243e)
