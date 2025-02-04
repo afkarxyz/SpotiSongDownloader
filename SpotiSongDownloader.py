@@ -15,7 +15,7 @@ from PyQt6.QtGui import QIcon, QTextCursor, QDesktopServices, QPixmap
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
 from getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
-from getURL import get_data, get_url
+from getTracks import get_data, get_url
 
 @dataclass
 class Track:
@@ -454,7 +454,7 @@ class SpotiSongDownloaderGUI(QWidget):
         cookies_layout = QVBoxLayout(cookies_group)
         cookies_layout.setSpacing(5)
         
-        cookies_label = QLabel('Cookies')
+        cookies_label = QLabel('Authentication')
         cookies_label.setStyleSheet("font-weight: bold; color: palette(text);")
         cookies_layout.addWidget(cookies_label)
         
@@ -463,7 +463,7 @@ class SpotiSongDownloaderGUI(QWidget):
         cookie_label.setStyleSheet("color: palette(text);")
         
         self.cookie_input = QLineEdit()
-        self.cookie_input.setPlaceholderText("Input your cookie here (optional)...")
+        self.cookie_input.setPlaceholderText("Input your Cookie here (optional)...")
         self.cookie_input.setText(self.last_cookie)
         self.cookie_input.textChanged.connect(self.save_cookie)
         self.cookie_input.setClearButtonEnabled(True)
@@ -528,7 +528,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v1.9 | February 2025")
+        footer_label = QLabel("v2.0 | February 2025")
         footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
