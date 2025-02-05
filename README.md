@@ -11,7 +11,7 @@
 
 To overcome the site's limitation of 3 downloads per day, I created this lightweight tool to bypass the daily download restriction.
 
-### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v2.0/SpotiSongDownloader.exe)
+### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v2.1/SpotiSongDownloader.exe)
 
 ## Screenshots
 
@@ -23,4 +23,4 @@ To overcome the site's limitation of 3 downloads per day, I created this lightwe
 
 ![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
 
-![image](https://github.com/user-attachments/assets/303278e8-50c5-44b8-b9b4-384aa4063f39)
+![image](https://github.com/user-attachments/assets/a2e69b52-ddf7-4d9c-bd7b-5fdb388ba8e3)
