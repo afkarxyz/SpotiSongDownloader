@@ -15,8 +15,7 @@ from PyQt6.QtGui import QIcon, QTextCursor, QDesktopServices, QPixmap
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
 from getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
-from getTracks import get_data, get_url
-from getCookie import get_cookie
+from getTracks import get_cookie, get_data, get_url
 
 @dataclass
 class Track:
@@ -37,7 +36,7 @@ class DownloadWorker(QThread):
         super().__init__()
         self.tracks = tracks
         self.outpath = outpath
-        self.cookies = cookies if cookies else "PHPSESSID=j1ckcp3uapkmdhs22htg11fqvf; quality=m4a"
+        self.cookies = cookies
         self.is_single_track = is_single_track
         self.is_album = is_album
         self.is_playlist = is_playlist
@@ -58,6 +57,11 @@ class DownloadWorker(QThread):
 
     def run(self):
         try:
+            if not self.cookies:
+                self.cookies = get_cookie()
+                if not self.cookies:
+                    raise Exception("Failed to get cookie")
+                    
             total_tracks = len(self.tracks)
             
             for i, track in enumerate(self.tracks):
@@ -116,7 +120,7 @@ class DownloadWorker(QThread):
             if not track_info:
                 raise Exception("Failed to get track information")
                 
-            download_link = get_url(track_info)
+            download_link = get_url(track_info, self.cookies)
             if not download_link:
                 raise Exception("Failed to get download link")
 
@@ -149,13 +153,13 @@ class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.tracks = []
-        self.album_or_playlist_name = ''
         self.reset_state()
         
         self.settings = QSettings('SpotiSongDownloader', 'Settings')
         self.last_output_path = self.settings.value('output_path', os.path.expanduser("~\\Music"))
-        self.default_cookie = "PHPSESSID=j1ckcp3uapkmdhs22htg11fqvf; quality=m4a"
-        self.last_cookie = self.settings.value('cookie', self.default_cookie)
+        
+        self.last_cookie = self.settings.value('cookie', '')
+        
         self.filename_format = self.settings.value('filename_format', 'title_artist')
         self.use_track_numbers = self.settings.value('use_track_numbers', False, type=bool)
         self.use_album_subfolders = self.settings.value('use_album_subfolders', False, type=bool)
@@ -168,6 +172,7 @@ class SpotiSongDownloaderGUI(QWidget):
         self.network_manager.finished.connect(self.on_cover_loaded)
         
         self.initUI()
+
 
     @staticmethod
     def format_duration(ms):
@@ -464,19 +469,23 @@ class SpotiSongDownloaderGUI(QWidget):
         cookie_label.setStyleSheet("color: palette(text);")
         
         self.cookie_input = QLineEdit()
-        self.cookie_input.setPlaceholderText("Input your Cookie here (optional)...")
+        self.cookie_input.setPlaceholderText("Cookie will be automatically updated when fetching tracks...")
         self.cookie_input.setText(self.last_cookie)
-        self.cookie_input.textChanged.connect(self.save_cookie)
-        self.cookie_input.setClearButtonEnabled(True)
+        self.cookie_input.setReadOnly(True)
+        self.cookie_input.setClearButtonEnabled(False)
         
-        self.refresh_token_btn = QPushButton('Refresh')
-        self.refresh_token_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.refresh_token_btn.clicked.connect(self.refresh_cookie)
+        refresh_cookie_btn = QPushButton('Refresh')
+        refresh_cookie_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        refresh_cookie_btn.clicked.connect(self.refresh_cookie)
         
         cookie_layout.addWidget(cookie_label)
         cookie_layout.addWidget(self.cookie_input)
-        cookie_layout.addWidget(self.refresh_token_btn)
+        cookie_layout.addWidget(refresh_cookie_btn)
         cookies_layout.addLayout(cookie_layout)
+        
+        cookie_info = QLabel("Cookie is automatically updated when fetching tracks")
+        cookie_info.setStyleSheet("color: palette(text); font-size: 10px; font-style: italic;")
+        cookies_layout.addWidget(cookie_info)
         
         settings_layout.addWidget(cookies_group)
 
@@ -534,7 +543,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v2.2 | February 2025")
+        footer_label = QLabel("v2.3 | February 2025")
         footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -564,25 +573,15 @@ class SpotiSongDownloaderGUI(QWidget):
         self.log_output.append("Settings saved successfully!")
 
     def refresh_cookie(self):
-        try:
-            from io import StringIO
-            import sys
-            
-            old_stdout = sys.stdout
-            sys.stdout = StringIO()
-            
-            get_cookie()
-            new_cookie = sys.stdout.getvalue().strip()
-            sys.stdout = old_stdout
-            
-            if new_cookie:
-                self.cookie_input.setText(new_cookie)
-                self.save_cookie()
-                self.log_output.append("Cookie refreshed successfully!")
-            else:
-                self.log_output.append("Warning: Failed to get new cookie (empty response)")
-        except Exception as e:
-            self.log_output.append(f"Error refreshing cookie: {str(e)}")
+        new_cookie = get_cookie()
+        if new_cookie:
+            self.last_cookie = new_cookie
+            self.cookie_input.setText(new_cookie)
+            self.settings.setValue('cookie', new_cookie)
+            self.settings.sync()
+            self.log_output.append("Cookie refreshed successfully!")
+        else:
+            self.log_output.append("Failed to refresh cookie. Please try again later.")
                         
     def fetch_tracks(self):
         url = self.spotify_url.text().strip()
@@ -592,6 +591,14 @@ class SpotiSongDownloaderGUI(QWidget):
             return
 
         try:
+            new_cookie = get_cookie()
+            if new_cookie:
+                self.last_cookie = new_cookie
+                self.cookie_input.setText(new_cookie)
+                self.settings.setValue('cookie', new_cookie)
+                self.settings.sync()
+                self.log_output.append("Cookie updated successfully!")
+            
             self.reset_state()
             self.reset_ui()
             
@@ -820,7 +827,10 @@ class SpotiSongDownloaderGUI(QWidget):
             self.log_output.append(f"Error: An error occurred while starting the download: {str(e)}")
 
     def start_download_worker(self, tracks_to_download, outpath):
-        current_cookie = self.cookie_input.text().strip() or self.default_cookie
+        current_cookie = get_cookie()
+        if not current_cookie:
+            self.log_output.append("Warning: Failed to get cookie. Using last known cookie.")
+            current_cookie = self.last_cookie
         
         self.worker = DownloadWorker(
             tracks_to_download, 
