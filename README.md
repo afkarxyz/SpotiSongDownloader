@@ -25,5 +25,5 @@ To overcome the site's limitation of 3 downloads per day, I created this lightwe
 
 ![image](https://github.com/user-attachments/assets/fb863f46-b2ac-480d-9008-1f60cd875a43)
 
-> [!Tip]
+> [!NOTE]
 > The cookie is automatically updated when fetching tracks, and you can also refresh it manually.
