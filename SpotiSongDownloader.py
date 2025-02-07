@@ -483,10 +483,6 @@ class SpotiSongDownloaderGUI(QWidget):
         cookie_layout.addWidget(refresh_cookie_btn)
         cookies_layout.addLayout(cookie_layout)
         
-        cookie_info = QLabel("Cookie is automatically updated when fetching tracks")
-        cookie_info.setStyleSheet("color: palette(text); font-size: 10px; font-style: italic;")
-        cookies_layout.addWidget(cookie_info)
-        
         settings_layout.addWidget(cookies_group)
 
         settings_layout.addStretch()
@@ -543,7 +539,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v2.3 | February 2025")
+        footer_label = QLabel("v2.4 | February 2025")
         footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
