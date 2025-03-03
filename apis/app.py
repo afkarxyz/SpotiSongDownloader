@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 import requests
 import urllib.parse
+import re
 
 app = Flask(__name__)
 
@@ -16,8 +17,24 @@ def get_cookie():
         cookies = session.cookies.get_dict()
         return f"PHPSESSID={cookies['PHPSESSID']}; quality=m4a"
         
-    except requests.exceptions.RequestException as e:
-        print(f"Error getting cookie: {e}")
+    except requests.exceptions.RequestException:
+        return None
+
+def get_api():
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+    }
+
+    try:
+        response = requests.get('https://spotisongdownloader.to/track.php', headers=headers)
+        response.raise_for_status()
+        
+        match = re.search(r'url:\s*"(/api/composer/spotify/[^"]+)"', response.text)
+        if match:
+            api_endpoint = match.group(1)
+            return f"https://spotisongdownloader.to{api_endpoint}"
+        
+    except requests.exceptions.RequestException:
         return None
 
 def get_data(track_id):
@@ -29,12 +46,13 @@ def get_data(track_id):
         )
         return response.json()
     
-    except Exception as error:
-        print(f'Error getting track data: {error}')
+    except:
         return None
 
 def get_url(track_data, cookie):
-    url = 'https://spotisongdownloader.to/api/composer/spotify/wertyuht3456.php'
+    url = get_api()
+    if not url:
+        return None
     
     payload = {
         'song_name': track_data['song_name'],
@@ -58,8 +76,7 @@ def get_url(track_data, cookie):
         encoded_link = urllib.parse.quote(download_data['dlink'], safe=':/?=')
         return encoded_link
     
-    except requests.RequestException as e:
-        print(f'Error getting download URL: {e}')
+    except:
         return None
 
 @app.route('/<track_id>')
