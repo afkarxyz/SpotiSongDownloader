@@ -5,7 +5,7 @@ import re
 
 app = Flask(__name__)
 
-def get_cookie():
+def get_cookie(use_m4a=False):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
     }
@@ -14,7 +14,10 @@ def get_cookie():
         response = session.get('https://spotisongdownloader.to/', headers=headers)
         response.raise_for_status()
         cookies = session.cookies.get_dict()
-        return f"PHPSESSID={cookies['PHPSESSID']}; quality=m4a"
+        if use_m4a:
+            return f"PHPSESSID={cookies['PHPSESSID']}; quality=m4a"
+        else:
+            return f"PHPSESSID={cookies['PHPSESSID']}"
     except requests.exceptions.RequestException:
         return None
 
@@ -38,7 +41,7 @@ def get_track_data(track_id):
     spotify_url = f"https://open.spotify.com/track/{track_id}"
     cookie = get_cookie()
     if not cookie:
-        return None, None, "Failed to get cookie"
+        return None, None, None
     
     try:
         response = requests.get(
@@ -55,9 +58,10 @@ def get_track_data(track_id):
             'released': track_data.get('released', ''),
             'album_name': track_data.get('album_name', '')
         }
-        return track_data, metadata, cookie
+        m4a_cookie = get_cookie(use_m4a=True)
+        return track_data, metadata, m4a_cookie
     except requests.exceptions.RequestException:
-        return None, None, "Failed to retrieve track data"
+        return None, None, None
 
 # Fallback
 def search_track(track_data, cookie):
@@ -124,41 +128,30 @@ def get_link(track_data, yt_data, cookie):
     except requests.exceptions.RequestException:
         return None
 
-def convert_link(download_data, cookie):
-    convert_url = "https://spotisongdownloader.to/api/convertRapidAPI.php"
-    params = {'url': download_data['link']}
-    headers = {'Cookie': cookie}
-    try:
-        response = requests.post(convert_url, data=params, headers=headers)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException:
-        return None
-
 @app.route('/<track_id>')
 def download_track(track_id):
-    track_data, metadata, cookie = get_track_data(track_id)
+    track_data, metadata, m4a_cookie = get_track_data(track_id)
     if not track_data:
         return jsonify({"error": "Failed to get track data"}), 404
         
-    download_link = get_url(track_data, cookie)
+    download_link = get_url(track_data, m4a_cookie)
     source = "primary"
     
     if not download_link:
         source = "fallback"
-        yt_data = search_track(track_data, cookie)
+        standard_cookie = get_cookie(use_m4a=False)
+        if not standard_cookie:
+            return jsonify({"error": "Failed to get cookie"}), 500
+            
+        yt_data = search_track(track_data, standard_cookie)
         if not yt_data:
             return jsonify({"error": "Failed to find matching YouTube data"}), 500
             
-        download_data = get_link(track_data, yt_data, cookie)
+        download_data = get_link(track_data, yt_data, standard_cookie)
         if not download_data:
             return jsonify({"error": "Failed to get download link"}), 500
             
-        converted_data = convert_link(download_data, cookie)
-        if not converted_data:
-            return jsonify({"error": "Failed to convert link"}), 500
-            
-        download_link = converted_data['dlink']
+        download_link = download_data['link']
     
     return jsonify({
         "url": download_link,
