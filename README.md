@@ -11,7 +11,7 @@
 
 To overcome the site's limitation of 3 downloads per day, I created this lightweight tool to bypass the daily download restriction.
 
-### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v2.7/SpotiSongDownloader.exe)
+### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v2.8/SpotiSongDownloader.exe)
 
 ## Screenshots
 
@@ -23,7 +23,8 @@ To overcome the site's limitation of 3 downloads per day, I created this lightwe
 
 ![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
 
-![image](https://github.com/user-attachments/assets/fb863f46-b2ac-480d-9008-1f60cd875a43)
+![image](https://github.com/user-attachments/assets/b5f2cdcc-ae21-4db0-b2cb-4f3b56180e64)
 
 > [!NOTE]
-> The cookie is automatically updated when fetching tracks, and you can also refresh it manually.
+> - The cookie is automatically updated when fetching tracks, and you can also refresh it manually.
+> - Please check the **Fallback** option if there are issues with the main API. I highly recommend always checking without Fallback, as the download process is faster.
