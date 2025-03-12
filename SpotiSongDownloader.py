@@ -18,6 +18,7 @@ from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkRepl
 
 from getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
 from getTracks import get_cookie, get_data, get_url
+from getFallback import get_cookie as get_fallback_cookie, get_track_data, search_track, get_link, convert_link, save_track, embed_metadata
 
 @dataclass
 class Track:
@@ -34,7 +35,7 @@ class DownloadWorker(QThread):
     
     def __init__(self, tracks, outpath, cookies=None, is_single_track=False, is_album=False, is_playlist=False, 
                  album_or_playlist_name='', filename_format='title_artist', use_track_numbers=True,
-                 use_album_subfolders=False):
+                 use_album_subfolders=False, use_fallback=False):
         super().__init__()
         self.tracks = tracks
         self.outpath = outpath
@@ -46,6 +47,7 @@ class DownloadWorker(QThread):
         self.filename_format = filename_format
         self.use_track_numbers = use_track_numbers
         self.use_album_subfolders = use_album_subfolders
+        self.use_fallback = use_fallback
         self.is_paused = False
         self.is_stopped = False
         self.failed_tracks = []
@@ -118,6 +120,39 @@ class DownloadWorker(QThread):
             if os.path.exists(full_path):
                 raise Exception("File already exists")
 
+            if self.use_fallback:
+                try:
+                    cookie = get_fallback_cookie()
+                    track_data = get_track_data(track.external_urls, cookie)
+                    
+                    if not track_data:
+                        raise Exception("Failed to get track information using fallback method")
+                    
+                    yt_data = search_track(track_data, cookie)
+                    if not yt_data:
+                        raise Exception("Failed to search track using fallback method")
+                    
+                    download_data = get_link(track_data, yt_data, cookie)
+                    if not download_data:
+                        raise Exception("Failed to get download link using fallback method")
+                    
+                    converted_data = convert_link(download_data, cookie)
+                    if not converted_data:
+                        raise Exception("Failed to convert link using fallback method")
+                    
+                    m4a_path = save_track(converted_data['dlink'], full_path.replace('.mp3', '.m4a'))
+                    if not m4a_path:
+                        raise Exception("Failed to download file using fallback method")
+                    
+                    embed_metadata(m4a_path, track_data)
+                    
+                    return
+                    
+                except NameError:
+                    raise Exception("Fallback module functions not available. Using default download method.")
+                except Exception as e:
+                    raise Exception(f"Fallback download failed: {str(e)}. Trying default method.")
+            
             track_info = get_data(track.external_urls)
             if not track_info:
                 raise Exception("Failed to get track information")
@@ -189,7 +224,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "2.7"
+        self.current_version = "2.8"
         self.tracks = []
         self.reset_state()
         
@@ -202,6 +237,7 @@ class SpotiSongDownloaderGUI(QWidget):
         self.filename_format = self.settings.value('filename_format', 'title_artist')
         self.use_track_numbers = self.settings.value('use_track_numbers', False, type=bool)
         self.use_album_subfolders = self.settings.value('use_album_subfolders', False, type=bool)
+        self.use_fallback = self.settings.value('use_fallback', False, type=bool)
         self.check_for_updates = self.settings.value('check_for_updates', True, type=bool)
         
         self.elapsed_time = QTime(0, 0, 0)
@@ -548,6 +584,16 @@ class SpotiSongDownloaderGUI(QWidget):
         cookie_layout.addWidget(refresh_cookie_btn)
         cookies_layout.addLayout(cookie_layout)
         
+        fallback_layout = QHBoxLayout()
+        self.fallback_checkbox = QCheckBox('Fallback')
+        self.fallback_checkbox.setStyleSheet("color: palette(text);")
+        self.fallback_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.fallback_checkbox.setChecked(self.use_fallback)
+        self.fallback_checkbox.toggled.connect(self.save_fallback_setting)
+        fallback_layout.addWidget(self.fallback_checkbox)
+        fallback_layout.addStretch()
+        cookies_layout.addLayout(fallback_layout)
+        
         settings_layout.addWidget(cookies_group)
 
         settings_layout.addStretch()
@@ -604,7 +650,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v2.7 | March 2025")
+        footer_label = QLabel("v2.8 | March 2025")
         footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -629,6 +675,12 @@ class SpotiSongDownloaderGUI(QWidget):
         self.use_album_subfolders = self.album_subfolder_checkbox.isChecked()
         self.settings.setValue('use_album_subfolders', self.use_album_subfolders)
         self.settings.sync()
+    
+    def save_fallback_setting(self):
+        self.use_fallback = self.fallback_checkbox.isChecked()
+        self.settings.setValue('use_fallback', self.use_fallback)
+        self.settings.sync()
+        self.log_output.append("Fallback setting saved successfully!")
     
     def save_cookie(self):
         current_cookie = self.cookie_input.text().strip()
@@ -907,7 +959,8 @@ class SpotiSongDownloaderGUI(QWidget):
             self.album_or_playlist_name,
             self.filename_format,
             self.use_track_numbers,
-            self.use_album_subfolders
+            self.use_album_subfolders,
+            self.use_fallback
         )
         self.worker.finished.connect(self.on_download_finished)
         self.worker.progress.connect(self.update_progress)
