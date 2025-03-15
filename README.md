@@ -6,11 +6,6 @@
 <b>SpotiSongDownloader</b> is a GUI tool designed to help download Spotify tracks from <b>spotisongdownloader.to</b> without limits.
 </div>
 
-#
-**spotisongdownloader.to** gives users a distinct edge by allowing them to download original M4A files directly from the source. This ensures better audio quality compared to other platforms that often rely on lower-quality tracks sourced from YouTube.
-
-To overcome the site's limitation of 3 downloads per day, I created this lightweight tool to bypass the daily download restriction.
-
 ### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v2.8/SpotiSongDownloader.exe)
 
 ## Screenshots
