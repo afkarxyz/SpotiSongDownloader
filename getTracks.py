@@ -1,98 +1,92 @@
 import requests
+import urllib.parse
 import re
 
-BASE_URL = "https://spotisongdownloader.to"
-DEFAULT_HEADERS = {
-    "accept": "application/json, text/javascript, */*; q=0.01",
-    "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
-}
+def get_cookie():
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+    }
 
-def create_session():
-    session = requests.Session()
-    session.headers.update(DEFAULT_HEADERS)
-    return session
-
-def get_cookie(url=BASE_URL):
     try:
-        session = create_session()
-        session.get(url)
-        return "; ".join([f"{c.name}={c.value}" for c in session.cookies])
-    except Exception as error:
-        print(f"Error getting cookies: {str(error)}")
-        return ""
-
-def clean(text):
-    return re.sub(r'[^\w\s-]', '', text.replace('&amp;', '&')).strip()
+        session = requests.Session()
+        response = session.get('https://spotisongdownloader.to/', headers=headers)
+        response.raise_for_status()
+        cookies = session.cookies.get_dict()
+        return f"PHPSESSID={cookies['PHPSESSID']}; quality=m4a"
+        
+    except requests.exceptions.RequestException:
+        return None
 
 def get_api():
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+    }
+
     try:
-        session = create_session()
-        response = session.get(f"{BASE_URL}/track.php")
-        match = re.search(r'url:\s*"(\/api\/composer\/spotify\/[^"]+)"', response.text)
-        return f"{BASE_URL}{match.group(1)}" if match else None
-    except Exception as error:
-        print(f"Error finding API URL: {str(error)}")
+        response = requests.get('https://spotisongdownloader.to/track.php', headers=headers)
+        response.raise_for_status()
+        
+        match = re.search(r'url:\s*"(/api/composer/spotify/[^"]+)"', response.text)
+        if match:
+            api_endpoint = match.group(1)
+            return f"https://spotisongdownloader.to{api_endpoint}"
+        
+    except requests.exceptions.RequestException:
         return None
 
-def get_data(url):
+def get_data(link):
     try:
-        session = create_session()
-        cookies = get_cookie(BASE_URL)
-        response = session.get(
-            f"{BASE_URL}/api/composer/spotify/xsingle_track.php",
-            params={"url": url},
-            headers={
-                "cookie": cookies,
-                "referer": BASE_URL
-            }
+        response = requests.get(
+            'https://spotisongdownloader.to/api/composer/spotify/xsingle_track.php', 
+            params={'url': link}
         )
-        
-        data = response.json()
-        if data.get("res") != 200:
-            return None
-        
-        data["song_name"] = clean(data["song_name"])
-        data["artist"] = clean(data["artist"])
-        return data
-    except Exception as error:
-        print(f"Error fetching track info: {str(error)}")
+        return response.json()
+    
+    except:
         return None
 
-def get_url(track_info, cookies=None):
+def get_url(track_data, cookie):
+    url = get_api()
+    
+    payload = {
+        'song_name': track_data['song_name'],
+        'artist_name': track_data['artist'],
+        'url': track_data['url']
+    }
+    
+    headers = {
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Cookie': cookie,
+        'Origin': 'https://spotisongdownloader.to',
+        'Referer': 'https://spotisongdownloader.to/track.php',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    }
+
     try:
-        session = create_session()
+        response = requests.post(url, data=payload, headers=headers)
+        response.raise_for_status()
+        download_data = response.json()
         
-        if not track_info or not track_info.get("song_name") or not track_info.get("artist"):
-            return None
-        
-        api_url = get_api()
-        if not api_url:
-            return {"error": "Failed to detect API URL"}
-        
-        if not cookies:
-            cookies = get_cookie(f"{BASE_URL}/track.php")
-            
-        form_data = {
-            "song_name": track_info["song_name"],
-            "artist_name": track_info["artist"],
-            "url": track_info.get("url", "")
-        }
-        
-        response = session.post(
-            api_url,
-            data=form_data,
-            headers={
-                "cookie": cookies,
-                "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-                "origin": BASE_URL,
-                "referer": f"{BASE_URL}/track.php"
-            }
-        )
-        
-        result = response.json()
-        if result and "dlink" in result:
-            return result["dlink"]
+        encoded_link = urllib.parse.quote(download_data['dlink'], safe=':/?=')
+        return encoded_link
+    
+    except:
         return None
-    except Exception as error:
-        print(f"Error fetching download link: {str(error)}")
-        return None
+
+def main():
+    url = "https://open.spotify.com/track/4wJ5Qq0jBN4ajy7ouZIV1c"
+    
+    cookie = get_cookie()
+    if not cookie:
+        return
+    
+    track_data = get_data(url)
+    if not track_data:
+        return
+        
+    link = get_url(track_data, cookie)
+    if link:
+        print(link)
+
+if __name__ == "__main__":
+    main()
