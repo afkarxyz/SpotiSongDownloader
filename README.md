@@ -18,10 +18,4 @@
 
 ![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
 
-![image](https://github.com/user-attachments/assets/b5f2cdcc-ae21-4db0-b2cb-4f3b56180e64)
-
-> [!NOTE]
-> The cookie is automatically updated when fetching tracks, and you can also refresh it manually.
-
-> [!TIP]
-> Please check the **Fallback** option if there are issues with the main API. I highly recommend always checking without Fallback, as the download process is faster.
+![image](https://github.com/user-attachments/assets/aa863c19-9b9c-4d3b-ae42-8bb29e5a706a)
