@@ -17,8 +17,6 @@ from PyQt6.QtGui import QIcon, QTextCursor, QDesktopServices, QPixmap
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
 from getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
-from getTracks import get_cookie, get_data, get_url
-from getFallback import get_cookie as get_fallback_cookie, get_track_data, search_track, get_link, convert_link, save_track, embed_metadata
 
 @dataclass
 class Track:
@@ -29,17 +27,36 @@ class Track:
     track_number: int
     duration_ms: int
 
+class MetadataFetchWorker(QThread):
+    finished = pyqtSignal(dict)
+    error = pyqtSignal(str)
+    
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+        
+    def run(self):
+        try:
+            metadata = get_filtered_data(self.url)
+            if "error" in metadata:
+                self.error.emit(metadata["error"])
+            else:
+                self.finished.emit(metadata)
+        except SpotifyInvalidUrlException as e:
+            self.error.emit(str(e))
+        except Exception as e:
+            self.error.emit(f'Failed to fetch metadata: {str(e)}')
+
 class DownloadWorker(QThread):
     finished = pyqtSignal(bool, str, list)
     progress = pyqtSignal(str, int)
     
-    def __init__(self, tracks, outpath, cookies=None, is_single_track=False, is_album=False, is_playlist=False, 
+    def __init__(self, tracks, outpath, is_single_track=False, is_album=False, is_playlist=False, 
                  album_or_playlist_name='', filename_format='title_artist', use_track_numbers=True,
-                 use_album_subfolders=False, use_fallback=False):
+                 use_album_subfolders=False):
         super().__init__()
         self.tracks = tracks
         self.outpath = outpath
-        self.cookies = cookies
         self.is_single_track = is_single_track
         self.is_album = is_album
         self.is_playlist = is_playlist
@@ -47,25 +64,20 @@ class DownloadWorker(QThread):
         self.filename_format = filename_format
         self.use_track_numbers = use_track_numbers
         self.use_album_subfolders = use_album_subfolders
-        self.use_fallback = use_fallback
         self.is_paused = False
         self.is_stopped = False
         self.failed_tracks = []
+        self.api_url = "https://spotisong.afkarxyz.workers.dev/api/download?url="
 
     def get_formatted_filename(self, track):
         if self.filename_format == "artist_title":
-            filename = f"{track.artists} - {track.title}.mp3"
+            filename = f"{track.artists} - {track.title}.m4a"
         else:
-            filename = f"{track.title} - {track.artists}.mp3"
+            filename = f"{track.title} - {track.artists}.m4a"
         return re.sub(r'[<>:"/\\|?*]', '_', filename)
 
     def run(self):
         try:
-            if not self.cookies:
-                self.cookies = get_cookie()
-                if not self.cookies:
-                    raise Exception("Failed to get cookie")
-                    
             total_tracks = len(self.tracks)
             
             for i, track in enumerate(self.tracks):
@@ -120,47 +132,19 @@ class DownloadWorker(QThread):
             if os.path.exists(full_path):
                 raise Exception("File already exists")
 
-            if self.use_fallback:
-                try:
-                    cookie = get_fallback_cookie()
-                    track_data = get_track_data(track.external_urls, cookie)
-                    
-                    if not track_data:
-                        raise Exception("Failed to get track information using fallback method")
-                    
-                    yt_data = search_track(track_data, cookie)
-                    if not yt_data:
-                        raise Exception("Failed to search track using fallback method")
-                    
-                    download_data = get_link(track_data, yt_data, cookie)
-                    if not download_data:
-                        raise Exception("Failed to get download link using fallback method")
-                    
-                    converted_data = convert_link(download_data, cookie)
-                    if not converted_data:
-                        raise Exception("Failed to convert link using fallback method")
-                    
-                    m4a_path = save_track(converted_data['dlink'], full_path.replace('.mp3', '.m4a'))
-                    if not m4a_path:
-                        raise Exception("Failed to download file using fallback method")
-                    
-                    embed_metadata(m4a_path, track_data)
-                    
-                    return
-                    
-                except NameError:
-                    raise Exception("Fallback module functions not available. Using default download method.")
-                except Exception as e:
-                    raise Exception(f"Fallback download failed: {str(e)}. Trying default method.")
+            api_request_url = f"{self.api_url}{track.external_urls}"
+            self.progress.emit(f"Fetching download link for: {track.title}", 0)
             
-            track_info = get_data(track.external_urls)
-            if not track_info:
-                raise Exception("Failed to get track information")
+            response = requests.get(api_request_url)
+            response.raise_for_status()
+            data = response.json()
+            
+            if "dlink" not in data:
+                raise Exception("API did not return a download link")
                 
-            download_link = get_url(track_info, self.cookies)
-            if not download_link:
-                raise Exception("Failed to get download link")
-
+            download_link = data["dlink"]
+            
+            self.progress.emit(f"Downloading: {track.title}", 0)
             response = requests.get(download_link, stream=True)
             response.raise_for_status()
             
@@ -224,7 +208,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "3.0"
+        self.current_version = "3.1"
         self.tracks = []
         self.reset_state()
         
@@ -232,12 +216,9 @@ class SpotiSongDownloaderGUI(QWidget):
         self.last_output_path = self.settings.value('output_path', os.path.expanduser("~\\Music"))
         self.last_url = self.settings.value('spotify_url', '')
         
-        self.last_cookie = self.settings.value('cookie', '')
-        
         self.filename_format = self.settings.value('filename_format', 'title_artist')
         self.use_track_numbers = self.settings.value('use_track_numbers', False, type=bool)
         self.use_album_subfolders = self.settings.value('use_album_subfolders', False, type=bool)
-        self.use_fallback = self.settings.value('use_fallback', False, type=bool)
         self.check_for_updates = self.settings.value('check_for_updates', True, type=bool)
         
         self.elapsed_time = QTime(0, 0, 0)
@@ -337,7 +318,7 @@ class SpotiSongDownloaderGUI(QWidget):
         directory = QFileDialog.getExistingDirectory(self, "Select Output Directory")
         if directory:
             self.output_dir.setText(directory)
-            self.save_cookie()
+            self.save_settings()
 
     def setup_tabs(self):
         self.tab_widget = QTabWidget()
@@ -487,7 +468,7 @@ class SpotiSongDownloaderGUI(QWidget):
         output_dir_layout = QHBoxLayout()
         self.output_dir = QLineEdit()
         self.output_dir.setText(self.last_output_path)
-        self.output_dir.textChanged.connect(self.save_cookie)
+        self.output_dir.textChanged.connect(self.save_settings)
         
         self.output_browse = QPushButton('Browse')
         self.output_browse.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -557,45 +538,6 @@ class SpotiSongDownloaderGUI(QWidget):
         
         settings_layout.addWidget(file_group)
 
-        cookies_group = QWidget()
-        cookies_layout = QVBoxLayout(cookies_group)
-        cookies_layout.setSpacing(5)
-        
-        cookies_label = QLabel('Authentication')
-        cookies_label.setStyleSheet("font-weight: bold; color: palette(text);")
-        cookies_layout.addWidget(cookies_label)
-        
-        cookie_layout = QHBoxLayout()
-        cookie_label = QLabel('Cookie:')
-        cookie_label.setStyleSheet("color: palette(text);")
-        
-        self.cookie_input = QLineEdit()
-        self.cookie_input.setPlaceholderText("Cookie will be automatically updated when fetching tracks...")
-        self.cookie_input.setText(self.last_cookie)
-        self.cookie_input.setReadOnly(True)
-        self.cookie_input.setClearButtonEnabled(False)
-        
-        refresh_cookie_btn = QPushButton('Refresh')
-        refresh_cookie_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        refresh_cookie_btn.clicked.connect(self.refresh_cookie)
-        
-        cookie_layout.addWidget(cookie_label)
-        cookie_layout.addWidget(self.cookie_input)
-        cookie_layout.addWidget(refresh_cookie_btn)
-        cookies_layout.addLayout(cookie_layout)
-        
-        fallback_layout = QHBoxLayout()
-        self.fallback_checkbox = QCheckBox('Fallback')
-        self.fallback_checkbox.setStyleSheet("color: palette(text);")
-        self.fallback_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.fallback_checkbox.setChecked(self.use_fallback)
-        self.fallback_checkbox.toggled.connect(self.save_fallback_setting)
-        fallback_layout.addWidget(self.fallback_checkbox)
-        fallback_layout.addStretch()
-        cookies_layout.addLayout(fallback_layout)
-        
-        settings_layout.addWidget(cookies_group)
-
         settings_layout.addStretch()
         settings_tab.setLayout(settings_layout)
         self.tab_widget.addTab(settings_tab, "Settings")
@@ -650,7 +592,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v3.0 | March 2025")
+        footer_label = QLabel("v3.1 | April 2025")
         footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -676,29 +618,10 @@ class SpotiSongDownloaderGUI(QWidget):
         self.settings.setValue('use_album_subfolders', self.use_album_subfolders)
         self.settings.sync()
     
-    def save_fallback_setting(self):
-        self.use_fallback = self.fallback_checkbox.isChecked()
-        self.settings.setValue('use_fallback', self.use_fallback)
-        self.settings.sync()
-        self.log_output.append("Fallback setting saved successfully!")
-    
-    def save_cookie(self):
-        current_cookie = self.cookie_input.text().strip()
-        self.settings.setValue('cookie', current_cookie if current_cookie else self.default_cookie)
+    def save_settings(self):
         self.settings.setValue('output_path', self.output_dir.text().strip())
         self.settings.sync()
         self.log_output.append("Settings saved successfully!")
-
-    def refresh_cookie(self):
-        new_cookie = get_cookie()
-        if new_cookie:
-            self.last_cookie = new_cookie
-            self.cookie_input.setText(new_cookie)
-            self.settings.setValue('cookie', new_cookie)
-            self.settings.sync()
-            self.log_output.append("Cookie refreshed successfully!")
-        else:
-            self.log_output.append("Failed to refresh cookie. Please try again later.")
                         
     def fetch_tracks(self):
         url = self.spotify_url.text().strip()
@@ -708,22 +631,23 @@ class SpotiSongDownloaderGUI(QWidget):
             return
 
         try:
-            new_cookie = get_cookie()
-            if new_cookie:
-                self.last_cookie = new_cookie
-                self.cookie_input.setText(new_cookie)
-                self.settings.setValue('cookie', new_cookie)
-                self.settings.sync()
-                self.log_output.append("Cookie updated successfully!")
-            
             self.reset_state()
             self.reset_ui()
             
-            metadata = get_filtered_data(url)
-            if "error" in metadata:
-                raise Exception(metadata["error"])
-                
-            url_info = parse_uri(url)
+            self.log_output.append('Just a moment. Fetching metadata...')
+            self.tab_widget.setCurrentWidget(self.process_tab)
+            
+            self.metadata_worker = MetadataFetchWorker(url)
+            self.metadata_worker.finished.connect(self.on_metadata_fetched)
+            self.metadata_worker.error.connect(self.on_metadata_error)
+            self.metadata_worker.start()
+            
+        except Exception as e:
+            self.log_output.append(f'Error: Failed to start metadata fetch: {str(e)}')
+    
+    def on_metadata_fetched(self, metadata):
+        try:
+            url_info = parse_uri(self.spotify_url.text().strip())
             
             if url_info["type"] == "track":
                 self.handle_track_metadata(metadata["track"])
@@ -734,11 +658,11 @@ class SpotiSongDownloaderGUI(QWidget):
                 
             self.update_button_states()
             self.tab_widget.setCurrentIndex(0)
-            
-        except SpotifyInvalidUrlException as e:
-            self.log_output.append(f'Error: {str(e)}')
         except Exception as e:
-            self.log_output.append(f'Error: Failed to fetch metadata: {str(e)}')
+            self.log_output.append(f'Error: {str(e)}')
+    
+    def on_metadata_error(self, error_message):
+        self.log_output.append(f'Error: {error_message}')
 
     def handle_track_metadata(self, track_data):
         self.tracks = [Track(
@@ -944,23 +868,16 @@ class SpotiSongDownloaderGUI(QWidget):
             self.log_output.append(f"Error: An error occurred while starting the download: {str(e)}")
 
     def start_download_worker(self, tracks_to_download, outpath):
-        current_cookie = get_cookie()
-        if not current_cookie:
-            self.log_output.append("Warning: Failed to get cookie. Using last known cookie.")
-            current_cookie = self.last_cookie
-        
         self.worker = DownloadWorker(
             tracks_to_download, 
-            outpath, 
-            current_cookie,
+            outpath,
             self.is_single_track, 
             self.is_album, 
             self.is_playlist, 
             self.album_or_playlist_name,
             self.filename_format,
             self.use_track_numbers,
-            self.use_album_subfolders,
-            self.use_fallback
+            self.use_album_subfolders
         )
         self.worker.finished.connect(self.on_download_finished)
         self.worker.progress.connect(self.update_progress)
