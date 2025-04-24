@@ -208,7 +208,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "3.1"
+        self.current_version = "3.2"
         self.tracks = []
         self.reset_state()
         
@@ -592,7 +592,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v3.1 | April 2025")
+        footer_label = QLabel("v3.2 | April 2025")
         footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -767,10 +767,21 @@ class SpotiSongDownloaderGUI(QWidget):
             self.followers_label.hide()
         
         if metadata.get('releaseDate'):
-            release_date = datetime.strptime(metadata['releaseDate'], "%Y-%m-%d")
-            formatted_date = release_date.strftime("%d-%m-%Y")
-            self.release_date_label.setText(f"<b>Released</b> {formatted_date}")
-            self.release_date_label.show()
+            try:
+                release_date = metadata['releaseDate']
+                if len(release_date) == 4:
+                    date_obj = datetime.strptime(release_date, "%Y")
+                elif len(release_date) == 7:
+                    date_obj = datetime.strptime(release_date, "%Y-%m")
+                else:
+                    date_obj = datetime.strptime(release_date, "%Y-%m-%d")
+                
+                formatted_date = date_obj.strftime("%d-%m-%Y")
+                self.release_date_label.setText(f"<b>Released</b> {formatted_date}")
+                self.release_date_label.show()
+            except ValueError:
+                self.release_date_label.setText(f"<b>Released</b> {metadata['releaseDate']}")
+                self.release_date_label.show()
         else:
             self.release_date_label.hide()
         
