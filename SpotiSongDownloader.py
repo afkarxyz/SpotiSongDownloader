@@ -67,7 +67,6 @@ class DownloadWorker(QThread):
         self.is_paused = False
         self.is_stopped = False
         self.failed_tracks = []
-        self.api_url = "https://spotisong.afkarxyz.workers.dev/api/download?url="
 
     def get_formatted_filename(self, track):
         if self.filename_format == "artist_title":
@@ -132,7 +131,16 @@ class DownloadWorker(QThread):
             if os.path.exists(full_path):
                 raise Exception("File already exists")
 
-            api_request_url = f"{self.api_url}{track.external_urls}"
+            track_id = None
+            if 'spotify.com/track/' in track.external_urls:
+                track_id = track.external_urls.split('track/')[1].split('?')[0]
+            elif 'spotify:track:' in track.external_urls:
+                track_id = track.external_urls.split(':')[2]
+            
+            if not track_id:
+                raise Exception("Could not extract track ID from URL")
+            
+            api_request_url = f"https://spotisongdownloader.vercel.app/{track_id}"
             self.progress.emit(f"Fetching download link for: {track.title}", 0)
             
             response = requests.get(api_request_url)
@@ -208,7 +216,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "3.2"
+        self.current_version = "3.3"
         self.tracks = []
         self.reset_state()
         
@@ -592,7 +600,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v3.2 | April 2025")
+        footer_label = QLabel("v3.3 | May 2025")
         footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
