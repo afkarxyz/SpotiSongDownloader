@@ -17,6 +17,7 @@ from PyQt6.QtGui import QIcon, QTextCursor, QDesktopServices, QPixmap
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
 from getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
+from getTracks import SpotiSongDownloader
 
 @dataclass
 class Track:
@@ -124,7 +125,7 @@ class DownloadWorker(QThread):
                 filename = f"{track.track_number:02d} - {self.get_formatted_filename(track)}"
             else:
                 filename = self.get_formatted_filename(track)
-            
+        
             filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
             full_path = os.path.join(outpath, filename)
 
@@ -136,31 +137,33 @@ class DownloadWorker(QThread):
                 track_id = track.external_urls.split('track/')[1].split('?')[0]
             elif 'spotify:track:' in track.external_urls:
                 track_id = track.external_urls.split(':')[2]
-            
+        
             if not track_id:
                 raise Exception("Could not extract track ID from URL")
-            
-            api_request_url = f"https://spotisongdownloader.vercel.app/{track_id}"
+        
+            spotify_url = f"https://open.spotify.com/track/{track_id}"
             self.progress.emit(f"Fetching download link for: {track.title}", 0)
-            
-            response = requests.get(api_request_url)
-            response.raise_for_status()
-            data = response.json()
+        
+            downloader = SpotiSongDownloader()
+            data = downloader.get_download_info(spotify_url)
+        
+            if "error" in data:
+                raise Exception(data["error"])
             
             if "dlink" not in data:
                 raise Exception("API did not return a download link")
-                
-            download_link = data["dlink"]
             
+            download_link = data["dlink"]
+        
             self.progress.emit(f"Downloading: {track.title}", 0)
             response = requests.get(download_link, stream=True)
             response.raise_for_status()
-            
+        
             with open(full_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
-            
+        
         except Exception as e:
             if str(e) == "File already exists":
                 raise
@@ -216,7 +219,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "3.3"
+        self.current_version = "3.4"
         self.tracks = []
         self.reset_state()
         
@@ -600,7 +603,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v3.3 | May 2025")
+        footer_label = QLabel("v3.4 | May 2025")
         footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
