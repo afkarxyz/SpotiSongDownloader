@@ -23,7 +23,18 @@ Requires **Google Chrome, Chromium, Microsoft Edge,** or **Brave** to obtain coo
 
 ![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
 
-![image](https://github.com/user-attachments/assets/f1f4a40c-b34d-4fd3-916a-1964ae73fab4)
+![image](https://github.com/user-attachments/assets/11013730-cb0b-4125-9b15-4c40f47fea7e)
 
 > [!Tip]
 If the download doesn't work, try refreshing the cookies.
+
+## How to Obtain a Cookie
+
+1. Open a new tab and press `F12` to open Developer Mode
+2. Select the "Network" tab
+3. Go to [https://spotisongdownloader.to/](https://spotisongdownloader.to/)
+4. Choose `spotisongdownloader.to` from the list in the Network tab
+5. After that, select the "Cookies" tab
+6. Copy the values of `PHPSESSID` and `cf_token`
+
+![image](https://github.com/user-attachments/assets/a01d04b4-8b70-4eb7-b635-618effe9ae71)
