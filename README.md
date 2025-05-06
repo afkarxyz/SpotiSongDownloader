@@ -11,7 +11,7 @@
 #
 
 > [!Important]
-> Requires **Google Chrome, Chromium, Microsoft Edge,** or **Brave** to obtain cookies.
+Requires **Google Chrome, Chromium, Microsoft Edge,** or **Brave** to obtain cookies.
 
 ## Screenshots
 
@@ -26,4 +26,4 @@
 ![image](https://github.com/user-attachments/assets/f1f4a40c-b34d-4fd3-916a-1964ae73fab4)
 
 > [!Tip]
-> If the download doesn't work, try refreshing the cookies.
+If the download doesn't work, try refreshing the cookies.
