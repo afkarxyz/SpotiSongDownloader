@@ -8,6 +8,11 @@
 
 ### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v3.4/SpotiSongDownloader.exe)
 
+#
+
+> [!Important]
+> Requires **Google Chrome, Chromium, Microsoft Edge,** or **Brave** to obtain cookies.
+
 ## Screenshots
 
 ![image](https://github.com/user-attachments/assets/426607c0-da2c-4b8c-9c88-c64159de77cc)
@@ -18,4 +23,7 @@
 
 ![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
 
-![image](https://github.com/user-attachments/assets/aa863c19-9b9c-4d3b-ae42-8bb29e5a706a)
+![image](https://github.com/user-attachments/assets/f1f4a40c-b34d-4fd3-916a-1964ae73fab4)
+
+> [!Tip]
+> If the download doesn't work, try refreshing the cookies.
