@@ -445,7 +445,7 @@ def get_filtered_data(spotify_url, batch=False, delay=1.0):
 if __name__ == '__main__':
     playlist = "https://open.spotify.com/playlist/5Qvz8wZIRYbEUUFoPueKI5"
     album = "https://open.spotify.com/album/7kFyd5oyJdVX2pIi6P4iHE"
-    song = "https://open.spotify.com/track/4wJ5Qq0jBN4ajy7ouZIV1c"
+    song = "https://open.spotify.com/track/2obxSEtNEcxUss3EkamUeL"
     
     filtered_playlist = get_filtered_data(playlist, batch=True, delay=0.1)
     print(json.dumps(filtered_playlist, indent=2))

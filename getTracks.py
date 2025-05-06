@@ -5,7 +5,12 @@ import json
 
 class SpotiSongDownloader:
     def __init__(self):
-        self.cookies = {}
+        self.cookies = {
+            "PHPSESSID": "0be4464e182566c83c0b55a304c8f776",
+            "ttpassed": "ttpassed",
+            "cf_token": "0eca9b019bb42ba9a4a99124c6dc114c",
+            "quality": "m4a"
+        }
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
         self.api_url = None
         self.base_url = "https://spotisongdownloader.to/"
@@ -30,16 +35,7 @@ class SpotiSongDownloader:
             
         return headers
 
-    def prepare_auth(self):
-        try:
-            url = f"{self.base_url}createToken.php"
-            res = requests.get(url, headers=self.get_headers())
-            token_match = re.search(r'cf_token=([^;]+)', res.text)
-            if token_match and token_match.group(1):
-                self.cookies['cf_token'] = token_match.group(1)
-        except Exception:
-            pass
-            
+    def find_api_url(self):
         if not self.api_url:
             try:
                 url = f"{self.base_url}track.php"
@@ -50,7 +46,7 @@ class SpotiSongDownloader:
             except Exception:
                 pass
                 
-        return bool(self.cookies.get('cf_token') and self.api_url)
+        return bool(self.api_url)
 
     def clean_text(self, text):
         if text is None:
@@ -109,11 +105,10 @@ class SpotiSongDownloader:
             return None
 
     def get_download_info(self, url):
-        self.cookies = {}
         self.api_url = None
         
-        if not self.prepare_auth():
-            return {"error": "Failed to initialize authentication"}
+        if not self.find_api_url():
+            return {"error": "Failed to find API URL"}
 
         track_info = self.get_track_info(url)
         if not track_info:

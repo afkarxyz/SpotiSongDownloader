@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import requests
 import re
+import asyncio
 from packaging import version
 
 from PyQt6.QtWidgets import (
@@ -47,6 +48,32 @@ class MetadataFetchWorker(QThread):
             self.error.emit(str(e))
         except Exception as e:
             self.error.emit(f'Failed to fetch metadata: {str(e)}')
+
+class CookieRefreshThread(QThread):
+    finished = pyqtSignal(dict)
+    error = pyqtSignal(str)
+    
+    def __init__(self, sleep_time):
+        super().__init__()
+        self.sleep_time = sleep_time
+        
+    def run(self):
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            from getCookies import get_cookies
+            cookies = loop.run_until_complete(get_cookies(self.sleep_time))
+            
+            loop.close()
+            
+            if not cookies:
+                self.error.emit("No cookies found")
+                return
+                
+            self.finished.emit(cookies)
+        except Exception as e:
+            self.error.emit(f"Failed to refresh cookies: {str(e)}")
 
 class DownloadWorker(QThread):
     finished = pyqtSignal(bool, str, list)
@@ -219,7 +246,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "3.4"
+        self.current_version = "3.5"
         self.tracks = []
         self.reset_state()
         
@@ -231,6 +258,22 @@ class SpotiSongDownloaderGUI(QWidget):
         self.use_track_numbers = self.settings.value('use_track_numbers', False, type=bool)
         self.use_album_subfolders = self.settings.value('use_album_subfolders', False, type=bool)
         self.check_for_updates = self.settings.value('check_for_updates', True, type=bool)
+        self.auth_refresh_speed = self.settings.value('auth_refresh_speed', 1, type=int)
+        
+        self.cookies = {}
+        cookie_names = ['PHPSESSID', 'ttpassed', 'cf_token', 'quality']
+        for name in cookie_names:
+            value = self.settings.value(f'cookie_{name}', '')
+            if value:
+                self.cookies[name] = value
+        
+        if self.cookies:
+            try:
+                from getTracks import SpotiSongDownloader
+                downloader = SpotiSongDownloader()
+                downloader.cookies = self.cookies
+            except Exception as e:
+                print(f"Error loading cookies: {str(e)}")
         
         self.elapsed_time = QTime(0, 0, 0)
         self.timer = QTimer(self)
@@ -473,7 +516,7 @@ class SpotiSongDownloaderGUI(QWidget):
         output_layout.setSpacing(5)
         
         output_label = QLabel('Output Directory')
-        output_label.setStyleSheet("font-weight: bold; color: palette(text);")
+        output_label.setStyleSheet("font-weight: bold;")
         output_layout.addWidget(output_label)
         
         output_dir_layout = QHBoxLayout()
@@ -496,21 +539,18 @@ class SpotiSongDownloaderGUI(QWidget):
         file_layout.setSpacing(5)
         
         file_label = QLabel('File Settings')
-        file_label.setStyleSheet("font-weight: bold; color: palette(text);")
+        file_label.setStyleSheet("font-weight: bold;")
         file_layout.addWidget(file_label)
         
         format_layout = QHBoxLayout()
         format_label = QLabel('Filename Format:')
-        format_label.setStyleSheet("color: palette(text);")
         
         self.format_group = QButtonGroup(self)
         self.title_artist_radio = QRadioButton('Title - Artist')
-        self.title_artist_radio.setStyleSheet("color: palette(text);")
         self.title_artist_radio.setCursor(Qt.CursorShape.PointingHandCursor)
         self.title_artist_radio.toggled.connect(self.save_filename_format)
         
         self.artist_title_radio = QRadioButton('Artist - Title')
-        self.artist_title_radio.setStyleSheet("color: palette(text);")
         self.artist_title_radio.setCursor(Qt.CursorShape.PointingHandCursor)
         self.artist_title_radio.toggled.connect(self.save_filename_format)
         
@@ -531,14 +571,12 @@ class SpotiSongDownloaderGUI(QWidget):
         checkbox_layout = QHBoxLayout()
         
         self.track_number_checkbox = QCheckBox('Add Track Numbers to Album Files')
-        self.track_number_checkbox.setStyleSheet("color: palette(text);")
         self.track_number_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         self.track_number_checkbox.setChecked(self.use_track_numbers)
         self.track_number_checkbox.toggled.connect(self.save_track_numbering)
         checkbox_layout.addWidget(self.track_number_checkbox)
         
         self.album_subfolder_checkbox = QCheckBox('Create Album Subfolders for Playlist Downloads')
-        self.album_subfolder_checkbox.setStyleSheet("color: palette(text);")
         self.album_subfolder_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
         self.album_subfolder_checkbox.setChecked(self.use_album_subfolders)
         self.album_subfolder_checkbox.toggled.connect(self.save_album_subfolder_setting)
@@ -548,6 +586,86 @@ class SpotiSongDownloaderGUI(QWidget):
         file_layout.addLayout(checkbox_layout)
         
         settings_layout.addWidget(file_group)
+
+        auth_group = QWidget()
+        auth_layout = QVBoxLayout(auth_group)
+        auth_layout.setSpacing(5)
+        
+        auth_label = QLabel('Authentication')
+        auth_label.setStyleSheet("font-weight: bold;")
+        auth_layout.addWidget(auth_label)
+        
+        auth_speed_layout = QHBoxLayout()
+        speed_label = QLabel('Refresh Speed:')
+        
+        self.speed_group = QButtonGroup(self)
+        self.fast_radio = QRadioButton('Fast')
+        self.fast_radio.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.fast_radio.toggled.connect(self.save_auth_refresh_speed)
+        self.fast_radio.setToolTip("1 second wait time")
+        
+        self.normal_radio = QRadioButton('Normal')
+        self.normal_radio.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.normal_radio.toggled.connect(self.save_auth_refresh_speed)
+        self.normal_radio.setToolTip("3 seconds wait time")
+        
+        self.slow_radio = QRadioButton('Slow')
+        self.slow_radio.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.slow_radio.toggled.connect(self.save_auth_refresh_speed)
+        self.slow_radio.setToolTip("5 seconds wait time")
+        
+        if self.auth_refresh_speed == 1:
+            self.fast_radio.setChecked(True)
+        elif self.auth_refresh_speed == 5:
+            self.slow_radio.setChecked(True)
+        else:
+            self.normal_radio.setChecked(True)
+        
+        self.speed_group.addButton(self.fast_radio)
+        self.speed_group.addButton(self.normal_radio)
+        self.speed_group.addButton(self.slow_radio)
+        
+        self.refresh_btn = QPushButton('Refresh')
+        self.refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.refresh_btn.clicked.connect(self.refresh_cookies)
+        
+        auth_speed_layout.addWidget(speed_label)
+        auth_speed_layout.addWidget(self.fast_radio)
+        auth_speed_layout.addWidget(self.normal_radio)
+        auth_speed_layout.addWidget(self.slow_radio)
+        auth_speed_layout.addStretch()
+        auth_speed_layout.addWidget(self.refresh_btn)
+        
+        auth_layout.addLayout(auth_speed_layout)
+        
+        cookies_layout = QVBoxLayout()
+        
+        self.cookies_label = QLabel("")
+        self.cookies_label.setStyleSheet("font-size: 11px;")
+        self.cookies_label.setWordWrap(True)
+        
+        if hasattr(self, 'cookies') and self.cookies:
+            display_cookies = {k: v for k, v in self.cookies.items() if k in ["PHPSESSID", "cf_token"]}
+            if display_cookies:
+                cookies_text = ", ".join([f"{name}: {value}" for name, value in display_cookies.items()])
+                self.cookies_label.setText(cookies_text)
+        else:
+            try:
+                from getTracks import SpotiSongDownloader
+                downloader = SpotiSongDownloader()
+                if downloader.cookies:
+                    self.cookies = downloader.cookies
+                    display_cookies = {k: v for k, v in self.cookies.items() if k in ["PHPSESSID", "cf_token"]}
+                    if display_cookies:
+                        cookies_text = ", ".join([f"{name}: {value}" for name, value in display_cookies.items()])
+                        self.cookies_label.setText(cookies_text)
+            except Exception as e:
+                print(f"Error getting initial cookies: {str(e)}")
+        
+        cookies_layout.addWidget(self.cookies_label)
+        auth_layout.addLayout(cookies_layout)
+
+        settings_layout.addWidget(auth_group)
 
         settings_layout.addStretch()
         settings_tab.setLayout(settings_layout)
@@ -603,8 +721,8 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v3.4 | May 2025")
-        footer_label.setStyleSheet("font-size: 12px; color: palette(text); margin-top: 10px;")
+        footer_label = QLabel("v3.5 | May 2025")
+        footer_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
         about_tab.setLayout(about_layout)
@@ -629,10 +747,61 @@ class SpotiSongDownloaderGUI(QWidget):
         self.settings.setValue('use_album_subfolders', self.use_album_subfolders)
         self.settings.sync()
     
+    def save_auth_refresh_speed(self):
+        if self.fast_radio.isChecked():
+            self.auth_refresh_speed = 1
+        elif self.slow_radio.isChecked():
+            self.auth_refresh_speed = 5
+        else:
+            self.auth_refresh_speed = 3
+        
+        self.settings.setValue('auth_refresh_speed', self.auth_refresh_speed)
+        self.settings.sync()
+    
     def save_settings(self):
         self.settings.setValue('output_path', self.output_dir.text().strip())
         self.settings.sync()
         self.log_output.append("Settings saved successfully!")
+    
+    def refresh_cookies(self):
+        self.log_output.clear()
+        self.log_output.append("Refreshing cookies...")
+        self.tab_widget.setCurrentWidget(self.process_tab)
+        
+        sleep_time = self.auth_refresh_speed
+        
+        self.cookie_thread = CookieRefreshThread(sleep_time)
+        self.cookie_thread.finished.connect(self.on_cookies_refreshed)
+        self.cookie_thread.error.connect(self.on_cookie_refresh_error)
+        self.cookie_thread.start()
+    
+    def on_cookies_refreshed(self, cookies):
+        try:
+            from getTracks import SpotiSongDownloader
+            downloader = SpotiSongDownloader()
+            downloader.cookies = cookies
+            
+            self.cookies = cookies
+            for name, value in cookies.items():
+                self.settings.setValue(f'cookie_{name}', value)
+            self.settings.sync()
+            
+            self.log_output.append("Cookies refreshed successfully!")
+            self.log_output.append("\nCurrent cookies:")
+            
+            display_cookies = {k: v for k, v in cookies.items() if k in ["PHPSESSID", "cf_token"]}
+            if display_cookies:
+                cookies_text = ", ".join([f"{name}: {value}" for name, value in display_cookies.items()])
+                self.cookies_label.setText(cookies_text)
+            
+            for name, value in cookies.items():
+                self.log_output.append(f"{name}: {value}")
+                
+        except Exception as e:
+            self.log_output.append(f"Error updating cookies: {str(e)}")
+    
+    def on_cookie_refresh_error(self, error_message):
+        self.log_output.append(f"Error refreshing cookies: {error_message}")
                         
     def fetch_tracks(self):
         url = self.spotify_url.text().strip()
