@@ -6,7 +6,7 @@
 <b>SpotiSongDownloader</b> is a GUI tool designed to help download Spotify tracks from <b>spotisongdownloader.to</b> without limits.
 </div>
 
-### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v3.5/SpotiSongDownloader.exe)
+### [Download](https://github.com/afkarxyz/SpotiSongDownloader/releases/download/v3.6/SpotiSongDownloader.exe)
 
 #
 
