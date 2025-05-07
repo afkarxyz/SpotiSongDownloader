@@ -26,7 +26,8 @@ Requires **Google Chrome, Chromium, Microsoft Edge,** or **Brave** to obtain coo
 ![image](https://github.com/user-attachments/assets/11013730-cb0b-4125-9b15-4c40f47fea7e)
 
 > [!Tip]
-If the download doesn't work, try refreshing the cookies.
+> - If the download doesn't work, try refreshing the cookies.
+> - You can leave `cf_token` empty, because only the `PHPSESSID` is needed. If it doesn't work, then add the `cf_token`. If it's not available on `spotisongdownloader.to`, look for it in `createToken.php`
 
 ## How to Obtain a Cookie
 
