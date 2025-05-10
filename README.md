@@ -26,4 +26,4 @@
 ![image](https://github.com/user-attachments/assets/101963a2-9d8b-4876-9367-479cb8fd6795)
 
 > [!Tip]
-> If the download doesn't work, try refreshing the cookies.
+> If the download doesn't work, try refreshing the cookie.
