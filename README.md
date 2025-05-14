@@ -1,10 +1,5 @@
 [![GitHub All Releases](https://img.shields.io/github/downloads/afkarxyz/SpotiSongDownloader/total?style=for-the-badge)](https://github.com/afkarxyz/SpotiSongDownloader/releases)
 
-> [!Important]
-> This project is **temporarily suspended** and I’m not fixing it because `SpotiSongDownloader.to` currently downloads files from **YouTube**, not from the original source like before. Please use [SpotiDownloader](https://github.com/afkarxyz/SpotiDownloader), which also downloads from YouTube. Or if you want something better, use [Spotizer](https://github.com/afkarxyz/Spotizer), which downloads from `Deezer`. And if you want true FLAC quality, please use [SpotiFLAC](https://github.com/afkarxyz/SpotiFLAC).
-> 
-> ![image](https://github.com/user-attachments/assets/7eb982ea-5263-45cd-af38-d50d240f4b09)
-
 ![SpotiSongDownloader](https://github.com/user-attachments/assets/3c17df36-86d0-490b-b32d-d57ac691f48e)
 
 <div align="center">
