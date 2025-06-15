@@ -23,7 +23,7 @@
 
 ![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
 
-![image](https://github.com/user-attachments/assets/101963a2-9d8b-4876-9367-479cb8fd6795)
+![image](https://github.com/user-attachments/assets/ff9b100c-ac80-4e1f-9fb6-548071493d84)
 
 > [!Tip]
 > If the download doesn't work, try refreshing the cookie.
