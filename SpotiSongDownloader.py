@@ -248,7 +248,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "3.8"
+        self.current_version = "3.9"
         self.tracks = []
         self.reset_state()
         
@@ -262,7 +262,7 @@ class SpotiSongDownloaderGUI(QWidget):
         self.check_for_updates = self.settings.value('check_for_updates', True, type=bool)
         
         self.cookies = {}
-        cookie_names = ['PHPSESSID', 'ttpassed', 'cf_token', 'quality']
+        cookie_names = ['PHPSESSID', 'quality', '_ga', '_ga_X67PVRK9F0']
         for name in cookie_names:
             value = self.settings.value(f'cookie_{name}', '')
             if value:
@@ -603,20 +603,38 @@ class SpotiSongDownloaderGUI(QWidget):
         self.cookies_label.setWordWrap(True)
         
         if hasattr(self, 'cookies') and self.cookies:
-            display_cookies = {k: v for k, v in self.cookies.items() if k in ["PHPSESSID", "cf_token"]}
+            display_cookies = {k: v for k, v in self.cookies.items() if k in ["PHPSESSID", "quality", "_ga", "_ga_X67PVRK9F0"]}
             if display_cookies:
-                cookies_text = ", ".join([f"{value}" for name, value in display_cookies.items()])
-                self.cookies_label.setText(cookies_text)
+                cookies_text = []
+                for name, value in display_cookies.items():
+                    if name == "PHPSESSID":
+                        cookies_text.append(f"PHP: {value[:16]}...")
+                    elif name == "quality":
+                        cookies_text.append(f"Quality: {value}")
+                    elif name == "_ga":
+                        cookies_text.append(f"GA: {value[:16]}...")
+                    elif name == "_ga_X67PVRK9F0":
+                        cookies_text.append(f"GA_X67: {value[:16]}...")
+                self.cookies_label.setText(" | ".join(cookies_text))
         else:
             try:
                 from getTracks import SpotiSongDownloader
                 downloader = SpotiSongDownloader()
                 if downloader.cookies:
                     self.cookies = downloader.cookies
-                    display_cookies = {k: v for k, v in self.cookies.items() if k in ["PHPSESSID", "cf_token"]}
+                    display_cookies = {k: v for k, v in self.cookies.items() if k in ["PHPSESSID", "quality", "_ga", "_ga_X67PVRK9F0"]}
                     if display_cookies:
-                        cookies_text = ", ".join([f"{value}" for name, value in display_cookies.items()])
-                        self.cookies_label.setText(cookies_text)
+                        cookies_text = []
+                        for name, value in display_cookies.items():
+                            if name == "PHPSESSID":
+                                cookies_text.append(f"PHP: {value[:16]}...")
+                            elif name == "quality":
+                                cookies_text.append(f"Quality: {value}")
+                            elif name == "_ga":
+                                cookies_text.append(f"GA: {value[:16]}...")
+                            elif name == "_ga_X67PVRK9F0":
+                                cookies_text.append(f"GA_X67: {value[:16]}...")
+                        self.cookies_label.setText(" | ".join(cookies_text))
             except Exception as e:
                 print(f"Error getting initial cookies: {str(e)}")
         
@@ -687,7 +705,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v3.8 | June 2025")
+        footer_label = QLabel("v3.9 | June 2025")
         footer_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -743,10 +761,19 @@ class SpotiSongDownloaderGUI(QWidget):
             self.log_output.append("Cookies refreshed successfully!")
             self.log_output.append("\nCurrent cookies:")
             
-            display_cookies = {k: v for k, v in cookies.items() if k in ["PHPSESSID", "cf_token"]}
+            display_cookies = {k: v for k, v in cookies.items() if k in ["PHPSESSID", "quality", "_ga", "_ga_X67PVRK9F0"]}
             if display_cookies:
-                cookies_text = ", ".join([f"{value}" for name, value in display_cookies.items()])
-                self.cookies_label.setText(cookies_text)
+                cookies_text = []
+                for name, value in display_cookies.items():
+                    if name == "PHPSESSID":
+                        cookies_text.append(f"PHP: {value[:16]}...")
+                    elif name == "quality":
+                        cookies_text.append(f"Quality: {value}")
+                    elif name == "_ga":
+                        cookies_text.append(f"GA: {value[:16]}...")
+                    elif name == "_ga_X67PVRK9F0":
+                        cookies_text.append(f"GA_X67: {value[:16]}...")
+                self.cookies_label.setText(" | ".join(cookies_text))
             
             for name, value in cookies.items():
                 self.log_output.append(f"{name}: {value}")

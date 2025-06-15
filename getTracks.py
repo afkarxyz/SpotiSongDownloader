@@ -6,7 +6,10 @@ import json
 class SpotiSongDownloader:
     def __init__(self):
         self.cookies = {
-            "PHPSESSID": ""
+            "PHPSESSID": "",
+            "quality": "m4a",
+            "_ga": "",
+            "_ga_X67PVRK9F0": ""
         }
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
         self.api_url = None
@@ -120,12 +123,18 @@ class SpotiSongDownloader:
         else:
             return {**track_info, "error": "Download link not available"}
 
+    def set_cookies(self, cookies_dict):
+        for key, value in cookies_dict.items():
+            if key in self.cookies:
+                self.cookies[key] = value
+
 
 def main():
     track_id = "7so0lgd0zP2Sbgs2d7a1SZ"
     spotify_url = f"https://open.spotify.com/track/{track_id}"
     
     spotify = SpotiSongDownloader()
+    
     result = spotify.get_download_info(spotify_url)
     
     print(json.dumps(result, indent=2))

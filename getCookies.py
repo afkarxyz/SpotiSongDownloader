@@ -18,22 +18,22 @@ async def get_cookies():
             await page.evaluate(f"""
                 document.querySelector("#id_url").value = "{url}";
                 document.querySelector("#id_url").dispatchEvent(new Event('input', {{ bubbles: true }}));
-            """)
-
-            generate_link_button = await page.wait_for('a[dlink][class*="button is-primary"]')
+            """)            
+            generate_link_button = await page.wait_for('#submit')
             
             if generate_link_button:
                 await page.evaluate("""
-                    document.querySelector('a[dlink][class*="button is-primary"]').getAttribute('dlink')
+                    document.querySelector('#submit').click()
                 """)
+                
+                await asyncio.sleep(2)
                 
                 cookies_list = await browser.cookies.get_all()
                 
                 await browser.stop()
-                
                 cookies_dict = {}
                 for cookie in cookies_list:
-                    if cookie.name in ["PHPSESSID", "quality"]:
+                    if cookie.name in ["PHPSESSID", "quality", "_ga", "_ga_X67PVRK9F0"]:
                         cookies_dict[cookie.name] = cookie.value
                 
                 if "quality" not in cookies_dict:
