@@ -17,3 +17,9 @@
 ![image](https://github.com/user-attachments/assets/51413c09-b4e8-4384-887e-5c26eff437a6)
 
 ![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
+
+## Troubleshooting
+
+If an error occurs, please go to https://spotisongdownloader.to and try downloading one track after successfully completing the captcha as shown in this screenshot. Close your browser and try downloading again.
+
+![image](https://github.com/user-attachments/assets/a877a3c0-b5e0-4938-8a68-7104e1c35d33)
