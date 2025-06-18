@@ -4,16 +4,22 @@ import urllib.parse
 import json
 
 class SpotiSongDownloader:
-    def __init__(self):
+    def __init__(self, settings=None):
         self.cookies = {
-            "PHPSESSID": "",
+            "PHPSESSID": "3f8924ac0cf886b7ad986342678556d2",
             "quality": "m4a",
-            "_ga": "",
-            "_ga_X67PVRK9F0": ""
+            "_ga": "GA1.1.305424474.1747494125",
+            "_ga_X67PVRK9F0": "GS2.1.s1748011864$o3$g0$t1748011867$j0$l0$h0"
         }
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
         self.api_url = None
         self.base_url = "https://spotisongdownloader.to/"
+        self.settings = settings
+        
+        if self.settings:
+            cached_api_url = self.settings.value('cached_api_url', '')
+            if cached_api_url:
+                self.api_url = cached_api_url
 
     def get_headers(self, referer=None, with_cookies=False, is_post=False):
         headers = {
@@ -32,17 +38,44 @@ class SpotiSongDownloader:
                 "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                 "origin": self.base_url.rstrip('/')
             })
-            
         return headers
 
-    def find_api_url(self):
-        if not self.api_url:
+    def find_api_url(self, track_info, force_refresh=False):
+        if not force_refresh and self.api_url:
+            return True
+            
+        if track_info:
             try:
                 url = f"{self.base_url}track.php"
-                res = requests.get(url, headers=self.get_headers())
+                
+                data_array = [
+                    track_info.get('song_name', ''),
+                    track_info.get('duration', ''),
+                    track_info.get('img', ''),
+                    track_info.get('artist', ''),
+                    track_info.get('url', ''),
+                    track_info.get('album_name', ''),
+                    track_info.get('released', '')
+                ]
+                
+                form_data = {
+                    "data": json.dumps(data_array)
+                }
+                
+                res = requests.post(
+                    url, 
+                    data=form_data,
+                    headers=self.get_headers(url, with_cookies=True, is_post=True)
+                )
+                
                 match = re.search(r'url:\s*"(\/api\/composer\/spotify\/[^"]+)"', res.text)
                 if match and match.group(1):
                     self.api_url = f"{self.base_url}{match.group(1).lstrip('/')}"
+                    
+                    if self.settings:
+                        self.settings.setValue('cached_api_url', self.api_url)
+                        self.settings.sync()
+                        
             except Exception:
                 pass
                 
@@ -104,17 +137,23 @@ class SpotiSongDownloader:
         except Exception:
             return None
 
-    def get_download_info(self, url):
-        self.api_url = None
+    def get_download_info(self, url, retry_on_failure=True):
+        if not self.api_url:
+            self.api_url = None
         
-        if not self.find_api_url():
-            return {"error": "Failed to find API URL"}
-
         track_info = self.get_track_info(url)
         if not track_info:
             return {"error": "Track not found"}
 
+        if not self.find_api_url(track_info, force_refresh=False):
+            return {"error": "Failed to find API URL"}
+
         download_data = self.get_download_link(track_info)
+        
+        if not download_data and retry_on_failure:
+            if self.find_api_url(track_info, force_refresh=True):
+                download_data = self.get_download_link(track_info)
+            
         if not download_data:
             return {"error": "Failed to fetch download link"}
 

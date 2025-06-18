@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import datetime
 import requests
 import re
-import asyncio
 from packaging import version
 
 from PyQt6.QtWidgets import (
@@ -49,7 +48,7 @@ class MetadataFetchWorker(QThread):
         except Exception as e:
             self.error.emit(f'Failed to fetch metadata: {str(e)}')
 
-class CookieRefreshThread(QThread):
+class CookieFetchThread(QThread):
     finished = pyqtSignal(dict)
     error = pyqtSignal(str)
     
@@ -58,33 +57,45 @@ class CookieRefreshThread(QThread):
         
     def run(self):
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            response = requests.get("https://raw.githubusercontent.com/afkarxyz/SpotiSongDownloader/refs/heads/main/cookies.txt")
+            if response.status_code != 200:
+                self.error.emit("Failed to fetch cookies from GitHub")
+                return
+                
+            cookie_lines = response.text.strip().split('\n')
+            if not cookie_lines:
+                self.error.emit("No cookies found in GitHub file")
+                return
             
-            from getCookies import get_cookies
-            cookies = loop.run_until_complete(get_cookies())
+            import random
+            cookie_line = random.choice(cookie_lines).strip()
             
-            loop.close()
+            cookies = {}
+            for cookie_pair in cookie_line.split(';'):
+                if '=' in cookie_pair:
+                    key, value = cookie_pair.strip().split('=', 1)
+                    cookies[key] = value
             
             if not cookies:
-                self.error.emit("No cookies found")
+                self.error.emit("Failed to parse cookies")
                 return
                 
             self.finished.emit(cookies)
         except Exception as e:
-            self.error.emit(f"Failed to refresh cookies: {str(e)}")
+            self.error.emit(f"Failed to fetch cookies: {str(e)}")
 
 class DownloadWorker(QThread):
     finished = pyqtSignal(bool, str, list)
     progress = pyqtSignal(str, int)
     
-    def __init__(self, tracks, outpath, cookies, is_single_track=False, is_album=False, is_playlist=False, 
+    def __init__(self, tracks, outpath, cookies, settings=None, is_single_track=False, is_album=False, is_playlist=False, 
                  album_or_playlist_name='', filename_format='title_artist', use_track_numbers=True,
                  use_album_subfolders=False):
         super().__init__()
         self.tracks = tracks
         self.outpath = outpath
-        self.cookies = cookies  
+        self.cookies = cookies
+        self.settings = settings  
         self.is_single_track = is_single_track
         self.is_album = is_album
         self.is_playlist = is_playlist
@@ -171,7 +182,7 @@ class DownloadWorker(QThread):
             spotify_url = f"https://open.spotify.com/track/{track_id}"
             self.progress.emit(f"Fetching download link for: {track.title}", 0)
         
-            downloader = SpotiSongDownloader()
+            downloader = SpotiSongDownloader(self.settings)
             downloader.cookies = self.cookies
             
             data = downloader.get_download_info(spotify_url)
@@ -248,7 +259,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "3.9"
+        self.current_version = "4.0"
         self.tracks = []
         self.reset_state()
         
@@ -262,19 +273,6 @@ class SpotiSongDownloaderGUI(QWidget):
         self.check_for_updates = self.settings.value('check_for_updates', True, type=bool)
         
         self.cookies = {}
-        cookie_names = ['PHPSESSID', 'quality', '_ga', '_ga_X67PVRK9F0']
-        for name in cookie_names:
-            value = self.settings.value(f'cookie_{name}', '')
-            if value:
-                self.cookies[name] = value
-        
-        if self.cookies:
-            try:
-                from getTracks import SpotiSongDownloader
-                downloader = SpotiSongDownloader()
-                downloader.cookies = self.cookies
-            except Exception as e:
-                print(f"Error loading cookies: {str(e)}")
         
         self.elapsed_time = QTime(0, 0, 0)
         self.timer = QTimer(self)
@@ -285,8 +283,16 @@ class SpotiSongDownloaderGUI(QWidget):
         
         self.initUI()
         
+        self.fetch_initial_cookies()
+        
         if self.check_for_updates:
             QTimer.singleShot(0, self.check_updates)
+
+    def fetch_initial_cookies(self):
+        self.cookie_thread = CookieFetchThread()
+        self.cookie_thread.finished.connect(self.on_initial_cookies_loaded)
+        self.cookie_thread.error.connect(self.on_initial_cookie_error)
+        self.cookie_thread.start()
 
     def check_updates(self):
         try:
@@ -588,69 +594,6 @@ class SpotiSongDownloaderGUI(QWidget):
         
         settings_layout.addWidget(file_group)
 
-        auth_group = QWidget()
-        auth_layout = QVBoxLayout(auth_group)
-        auth_layout.setSpacing(5)
-        
-        auth_label = QLabel('Cookie')
-        auth_label.setStyleSheet("font-weight: bold;")
-        auth_layout.addWidget(auth_label)
-        
-        auth_info_layout = QHBoxLayout()
-        
-        self.cookies_label = QLabel("")
-        self.cookies_label.setStyleSheet("font-size: 11px;")
-        self.cookies_label.setWordWrap(True)
-        
-        if hasattr(self, 'cookies') and self.cookies:
-            display_cookies = {k: v for k, v in self.cookies.items() if k in ["PHPSESSID", "quality", "_ga", "_ga_X67PVRK9F0"]}
-            if display_cookies:
-                cookies_text = []
-                for name, value in display_cookies.items():
-                    if name == "PHPSESSID":
-                        cookies_text.append(f"PHP: {value[:16]}...")
-                    elif name == "quality":
-                        cookies_text.append(f"Quality: {value}")
-                    elif name == "_ga":
-                        cookies_text.append(f"GA: {value[:16]}...")
-                    elif name == "_ga_X67PVRK9F0":
-                        cookies_text.append(f"GA_X67: {value[:16]}...")
-                self.cookies_label.setText(" | ".join(cookies_text))
-        else:
-            try:
-                from getTracks import SpotiSongDownloader
-                downloader = SpotiSongDownloader()
-                if downloader.cookies:
-                    self.cookies = downloader.cookies
-                    display_cookies = {k: v for k, v in self.cookies.items() if k in ["PHPSESSID", "quality", "_ga", "_ga_X67PVRK9F0"]}
-                    if display_cookies:
-                        cookies_text = []
-                        for name, value in display_cookies.items():
-                            if name == "PHPSESSID":
-                                cookies_text.append(f"PHP: {value[:16]}...")
-                            elif name == "quality":
-                                cookies_text.append(f"Quality: {value}")
-                            elif name == "_ga":
-                                cookies_text.append(f"GA: {value[:16]}...")
-                            elif name == "_ga_X67PVRK9F0":
-                                cookies_text.append(f"GA_X67: {value[:16]}...")
-                        self.cookies_label.setText(" | ".join(cookies_text))
-            except Exception as e:
-                print(f"Error getting initial cookies: {str(e)}")
-        
-        self.refresh_btn = QPushButton('Refresh')
-        self.refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.refresh_btn.setStyleSheet("font-size: 12px;")
-        self.refresh_btn.clicked.connect(self.refresh_cookies)
-        
-        auth_info_layout.addWidget(self.cookies_label)
-        auth_info_layout.addStretch()
-        auth_info_layout.addWidget(self.refresh_btn)
-        
-        auth_layout.addLayout(auth_info_layout)
-
-        settings_layout.addWidget(auth_group)
-
         settings_layout.addStretch()
         settings_tab.setLayout(settings_layout)
         self.tab_widget.addTab(settings_tab, "Settings")
@@ -705,7 +648,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v3.9 | June 2025")
+        footer_label = QLabel("v4.0 | June 2025")
         footer_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -736,53 +679,20 @@ class SpotiSongDownloaderGUI(QWidget):
         self.settings.sync()
         self.log_output.append("Settings saved successfully!")
     
-    def refresh_cookies(self):
-        self.log_output.clear()
-        self.log_output.append("Refreshing cookies...")
-        self.tab_widget.setCurrentWidget(self.process_tab)
-        
-        self.cookie_thread = CookieRefreshThread()
-        self.cookie_thread.finished.connect(self.on_cookies_refreshed)
-        self.cookie_thread.error.connect(self.on_cookie_refresh_error)
-        self.cookie_thread.start()
-    
-    def on_cookies_refreshed(self, cookies):
+    def on_initial_cookies_loaded(self, cookies):
         try:
             from getTracks import SpotiSongDownloader
-            downloader = SpotiSongDownloader()
+            downloader = SpotiSongDownloader(self.settings)
             downloader.cookies = cookies
             
             self.cookies = cookies
-            
-            for name, value in cookies.items():
-                self.settings.setValue(f'cookie_{name}', value)
-            self.settings.sync()
-            
-            self.log_output.append("Cookies refreshed successfully!")
-            self.log_output.append("\nCurrent cookies:")
-            
-            display_cookies = {k: v for k, v in cookies.items() if k in ["PHPSESSID", "quality", "_ga", "_ga_X67PVRK9F0"]}
-            if display_cookies:
-                cookies_text = []
-                for name, value in display_cookies.items():
-                    if name == "PHPSESSID":
-                        cookies_text.append(f"PHP: {value[:16]}...")
-                    elif name == "quality":
-                        cookies_text.append(f"Quality: {value}")
-                    elif name == "_ga":
-                        cookies_text.append(f"GA: {value[:16]}...")
-                    elif name == "_ga_X67PVRK9F0":
-                        cookies_text.append(f"GA_X67: {value[:16]}...")
-                self.cookies_label.setText(" | ".join(cookies_text))
-            
-            for name, value in cookies.items():
-                self.log_output.append(f"{name}: {value}")
                 
         except Exception as e:
-            self.log_output.append(f"Error updating cookies: {str(e)}")
+            print(f"Error loading initial cookies: {str(e)}")
     
-    def on_cookie_refresh_error(self, error_message):
-        self.log_output.append(f"Error refreshing cookies: {error_message}")
+    def on_initial_cookie_error(self, error_message):
+        print(f"Error fetching initial cookies: {error_message}")
+        self.cookies = {}
                         
     def fetch_tracks(self):
         url = self.spotify_url.text().strip()
@@ -1043,7 +953,8 @@ class SpotiSongDownloaderGUI(QWidget):
         self.worker = DownloadWorker(
             tracks_to_download, 
             outpath,
-            self.cookies,  
+            self.cookies,
+            self.settings,
             self.is_single_track, 
             self.is_album, 
             self.is_playlist, 
