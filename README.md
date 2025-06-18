@@ -20,6 +20,6 @@
 
 ## Troubleshooting
 
-If an error occurs, please go to https://spotisongdownloader.to and try downloading one track after successfully completing the captcha as shown in this screenshot. Close your browser and try downloading again.
+If an error occurs, please go to https://spotisongdownloader.to and try downloading one track after successfully completing the captcha as shown in this screenshot. Close your browser and try downloading again. Maybe it can solve the problem, if it still doesn't work, try again in a little while.
 
 ![image](https://github.com/user-attachments/assets/a877a3c0-b5e0-4938-8a68-7104e1c35d33)
