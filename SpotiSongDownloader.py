@@ -48,42 +48,6 @@ class MetadataFetchWorker(QThread):
         except Exception as e:
             self.error.emit(f'Failed to fetch metadata: {str(e)}')
 
-class CookieFetchThread(QThread):
-    finished = pyqtSignal(dict)
-    error = pyqtSignal(str)
-    
-    def __init__(self):
-        super().__init__()
-        
-    def run(self):
-        try:
-            response = requests.get("https://raw.githubusercontent.com/afkarxyz/SpotiSongDownloader/refs/heads/main/cookies.txt")
-            if response.status_code != 200:
-                self.error.emit("Failed to fetch cookies from GitHub")
-                return
-                
-            cookie_lines = response.text.strip().split('\n')
-            if not cookie_lines:
-                self.error.emit("No cookies found in GitHub file")
-                return
-            
-            import random
-            cookie_line = random.choice(cookie_lines).strip()
-            
-            cookies = {}
-            for cookie_pair in cookie_line.split(';'):
-                if '=' in cookie_pair:
-                    key, value = cookie_pair.strip().split('=', 1)
-                    cookies[key] = value
-            
-            if not cookies:
-                self.error.emit("Failed to parse cookies")
-                return
-                
-            self.finished.emit(cookies)
-        except Exception as e:
-            self.error.emit(f"Failed to fetch cookies: {str(e)}")
-
 class DownloadWorker(QThread):
     finished = pyqtSignal(bool, str, list)
     progress = pyqtSignal(str, int)
@@ -259,7 +223,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "4.0"
+        self.current_version = "4.1"
         self.tracks = []
         self.reset_state()
         
@@ -272,7 +236,14 @@ class SpotiSongDownloaderGUI(QWidget):
         self.use_album_subfolders = self.settings.value('use_album_subfolders', False, type=bool)
         self.check_for_updates = self.settings.value('check_for_updates', True, type=bool)
         
+        default_cookies = self.get_default_cookies()
+        stored_cookies = self.settings.value('cookies', default_cookies)
         self.cookies = {}
+        if stored_cookies:
+            for cookie_pair in stored_cookies.split(';'):
+                if '=' in cookie_pair:
+                    key, value = cookie_pair.strip().split('=', 1)
+                    self.cookies[key] = value
         
         self.elapsed_time = QTime(0, 0, 0)
         self.timer = QTimer(self)
@@ -283,16 +254,10 @@ class SpotiSongDownloaderGUI(QWidget):
         
         self.initUI()
         
-        self.fetch_initial_cookies()
-        
         if self.check_for_updates:
             QTimer.singleShot(0, self.check_updates)
 
-    def fetch_initial_cookies(self):
-        self.cookie_thread = CookieFetchThread()
-        self.cookie_thread.finished.connect(self.on_initial_cookies_loaded)
-        self.cookie_thread.error.connect(self.on_initial_cookie_error)
-        self.cookie_thread.start()
+
 
     def check_updates(self):
         try:
@@ -593,6 +558,34 @@ class SpotiSongDownloaderGUI(QWidget):
         file_layout.addLayout(checkbox_layout)
         
         settings_layout.addWidget(file_group)
+        
+        cookies_group = QWidget()
+        cookies_layout = QVBoxLayout(cookies_group)
+        cookies_layout.setSpacing(5)
+        
+        cookies_label = QLabel('Cookies')
+        cookies_label.setStyleSheet("font-weight: bold;")
+        cookies_layout.addWidget(cookies_label)
+        
+        cookies_input_layout = QHBoxLayout()
+        
+        self.cookies_input = QLineEdit()
+        self.cookies_input.setPlaceholderText("Enter cookies here (e.g., PHPSESSID=value; other=value)")
+        default_cookies = self.get_default_cookies()
+        stored_cookies = self.settings.value('cookies', default_cookies)
+        self.cookies_input.setText(stored_cookies)
+        self.cookies_input.textChanged.connect(self.save_cookies)
+        
+        clear_cookies_btn = QPushButton('Clear')
+        clear_cookies_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        clear_cookies_btn.clicked.connect(self.clear_cookies)
+        clear_cookies_btn.setFixedWidth(60)
+        
+        cookies_input_layout.addWidget(self.cookies_input)
+        cookies_input_layout.addWidget(clear_cookies_btn)
+        cookies_layout.addLayout(cookies_input_layout)
+        
+        settings_layout.addWidget(cookies_group)
 
         settings_layout.addStretch()
         settings_tab.setLayout(settings_layout)
@@ -648,7 +641,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v4.0 | June 2025")
+        footer_label = QLabel("v4.1 | June 2025")
         footer_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -673,6 +666,22 @@ class SpotiSongDownloaderGUI(QWidget):
         self.use_album_subfolders = self.album_subfolder_checkbox.isChecked()
         self.settings.setValue('use_album_subfolders', self.use_album_subfolders)
         self.settings.sync()
+    
+    def save_cookies(self):
+        cookies_text = self.cookies_input.text().strip()
+        self.settings.setValue('cookies', cookies_text)
+        self.settings.sync()
+        
+        self.cookies = {}
+        if cookies_text:
+            for cookie_pair in cookies_text.split(';'):
+                if '=' in cookie_pair:
+                    key, value = cookie_pair.strip().split('=', 1)
+                    self.cookies[key] = value
+    
+    def clear_cookies(self):
+        default_cookies = self.get_default_cookies()
+        self.cookies_input.setText(default_cookies)
     
     def save_settings(self):
         self.settings.setValue('output_path', self.output_dir.text().strip())
@@ -1059,6 +1068,20 @@ class SpotiSongDownloaderGUI(QWidget):
     def stop_timer(self):
         self.timer.stop()
         self.time_label.hide()
+
+    def get_default_cookies(self):
+        try:
+            from getTracks import SpotiSongDownloader as Downloader
+            downloader = Downloader()
+            if hasattr(downloader, 'cookies') and downloader.cookies:
+                cookie_pairs = []
+                for key, value in downloader.cookies.items():
+                    cookie_pairs.append(f"{key}={value}")
+                return "; ".join(cookie_pairs)
+        except Exception as e:
+            print(f"Error getting default cookies from getTracks.py: {e}")
+        
+        return ""
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

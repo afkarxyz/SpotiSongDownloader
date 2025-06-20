@@ -6,10 +6,7 @@ import json
 class SpotiSongDownloader:
     def __init__(self, settings=None):
         self.cookies = {
-            "PHPSESSID": "3f8924ac0cf886b7ad986342678556d2",
-            "quality": "m4a",
-            "_ga": "GA1.1.305424474.1747494125",
-            "_ga_X67PVRK9F0": "GS2.1.s1748011864$o3$g0$t1748011867$j0$l0$h0"
+            "PHPSESSID": ""
         }
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
         self.api_url = None
