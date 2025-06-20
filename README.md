@@ -18,6 +18,8 @@
 
 ![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
 
+![image](https://github.com/user-attachments/assets/d7a5145b-84ed-4dbe-8a9d-0daf0d912187)
+
 ## Troubleshooting
 
 How to get cookies, please go to https://spotisongdownloader.to, download one song first, then open Dev Tools, press `F12`, navigate to spotisongdownloader.to, and copy the cookies, specifically the `PHPSESSID=`
