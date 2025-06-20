@@ -22,7 +22,7 @@
 
 ## Troubleshooting
 
-How to get cookies, please go to https://spotisongdownloader.to, download one song first, then open Dev Tools, press `F12`, navigate to spotisongdownloader.to, and copy the cookies, specifically the `PHPSESSID=`
+Please go to https://spotisongdownloader.to, download one song first, then open Dev Tools, press `F12`, navigate to spotisongdownloader.to, and copy the cookies, specifically the `PHPSESSID=`
 
 ![chrome_rPr9AfwA0m](https://github.com/user-attachments/assets/881afac9-34b8-446c-bcd7-24970cf0c290)
 
@@ -30,6 +30,6 @@ If an error occurs during the download process, please visit https://spotisongdo
 
 ![chrome_28lv5eKYDt](https://github.com/user-attachments/assets/95946dd4-4af7-4f0e-bc18-ebb3d9289618)
 
-If you are limited to downloading 3 times daily, please use a **VPN** and clear your browser cookies from https://spotisongdownloader.to
+If you are limited to downloading 3 times daily, please clear your cookies, and if that doesn't resolve the issue, try using a VPN.
 
 ![chrome_8M2L2YE38S](https://github.com/user-attachments/assets/68303d1a-02a4-46ce-8c98-4163b99a875d)
