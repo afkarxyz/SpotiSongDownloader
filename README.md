@@ -20,6 +20,14 @@
 
 ## Troubleshooting
 
-If an error occurs, please go to https://spotisongdownloader.to and try downloading one track after successfully completing the captcha as shown in this screenshot. Close your browser and try downloading again. Maybe it can solve the problem, if it still doesn't work, try again in a little while.
+If an error occurs, please go to https://spotisongdownloader.to, download one song first, then open Dev Tools, press `F12`, navigate to spotisongdownloader.to, and copy the cookies, specifically the `PHPSESSID=`
 
-![image](https://github.com/user-attachments/assets/a877a3c0-b5e0-4938-8a68-7104e1c35d33)
+![chrome_rPr9AfwA0m](https://github.com/user-attachments/assets/881afac9-34b8-446c-bcd7-24970cf0c290)
+
+If an error occurs during the download process, please visit https://spotisongdownloader.to, download the song, and complete the captcha.
+
+![chrome_28lv5eKYDt](https://github.com/user-attachments/assets/95946dd4-4af7-4f0e-bc18-ebb3d9289618)
+
+If you are limited to downloading 3 times daily, please use a VPN and clear your browser cookies from https://spotisongdownloader.to
+
+![chrome_8M2L2YE38S](https://github.com/user-attachments/assets/68303d1a-02a4-46ce-8c98-4163b99a875d)
