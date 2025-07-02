@@ -223,7 +223,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "4.1"
+        self.current_version = "4.2"
         self.tracks = []
         self.reset_state()
         
@@ -600,7 +600,7 @@ class SpotiSongDownloaderGUI(QWidget):
         sections = [
             ("Check for Updates", "https://github.com/afkarxyz/SpotiSongDownloader/releases"),
             ("Report an Issue", "https://github.com/afkarxyz/SpotiSongDownloader/issues"),
-            ("SpotiSongDownloader Site", "https://spotisongdownloader.to/")
+            ("SpotiSongDownloader Site", "spotisongdownloader.to")
         ]
 
         for title, url in sections:
@@ -632,7 +632,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 }
             """)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
-            button.clicked.connect(lambda _, url=url: QDesktopServices.openUrl(QUrl(url)))
+            button.clicked.connect(lambda _, url=url: QDesktopServices.openUrl(QUrl(url if url.startswith(('http://', 'https://')) else f'https://{url}')))
             section_layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignCenter)
 
             about_layout.addWidget(section_widget)
@@ -641,7 +641,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v4.1 | June 2025")
+        footer_label = QLabel("v4.2 | July 2025")
         footer_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
