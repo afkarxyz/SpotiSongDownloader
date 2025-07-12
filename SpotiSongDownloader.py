@@ -223,7 +223,7 @@ class UpdateDialog(QDialog):
 class SpotiSongDownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.current_version = "4.3"
+        self.current_version = "4.4"
         self.tracks = []
         self.reset_state()
         
@@ -641,7 +641,7 @@ class SpotiSongDownloaderGUI(QWidget):
                 spacer = QSpacerItem(20, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                 about_layout.addItem(spacer)
 
-        footer_label = QLabel("v4.3 | July 2025")
+        footer_label = QLabel("v4.4 | July 2025")
         footer_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
         about_layout.addWidget(footer_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
