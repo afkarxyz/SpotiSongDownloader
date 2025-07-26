@@ -10,15 +10,13 @@
 
 ## Screenshots
 
-![image](https://github.com/user-attachments/assets/426607c0-da2c-4b8c-9c88-c64159de77cc)
+![image](https://github.com/user-attachments/assets/9c3686de-00c6-4c19-b8f3-6d4aa357edec)
 
-![image](https://github.com/user-attachments/assets/4f5ca0ac-20a0-4091-9f71-04d217d32714)
+![image](https://github.com/user-attachments/assets/29b4ac81-932b-407d-940d-00d6b79976fa)
 
-![image](https://github.com/user-attachments/assets/51413c09-b4e8-4384-887e-5c26eff437a6)
+![image](https://github.com/user-attachments/assets/29b4ac81-932b-407d-940d-00d6b79976fa)
 
-![image](https://github.com/user-attachments/assets/cd65a137-2444-4e6d-9e57-e17be17fdb57)
-
-![image](https://github.com/user-attachments/assets/f8fff8a6-a1b4-47cf-b90a-cd5c06cec80f)
+![image](https://github.com/user-attachments/assets/e7c96cdd-2637-46b1-a68f-d82ec4027d09)
 
 ## Troubleshooting
 
