@@ -2,13 +2,17 @@ import requests
 import re
 import urllib.parse
 import json
+from random import randrange
+
+def get_random_user_agent():
+    return f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_{randrange(11, 15)}_{randrange(4, 9)}) AppleWebKit/{randrange(530, 537)}.{randrange(30, 37)} (KHTML, like Gecko) Chrome/{randrange(80, 105)}.0.{randrange(3000, 4500)}.{randrange(60, 125)} Safari/{randrange(530, 537)}.{randrange(30, 36)}"
 
 class SpotiSongDownloader:
     def __init__(self, settings=None):
         self.cookies = {
             "PHPSESSID": ""
         }
-        self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
+        self.user_agent = get_random_user_agent()
         self.api_url = None
         self.base_url = "https://spotisongdownloader.to/"
         self.settings = settings
